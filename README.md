@@ -11,5 +11,5 @@ Contains a number of packages which I frequently need/use (aka a collection of a
 	* `paths` disambiguating the paths on various systems/machines I use
 
 
-Don't even try to install it on your machine, it IS GOING TO FAIL. There aren't any config options and all parts are hardcoded for my system.
+Don't even try to install it on your machine, it IS GOING TO FAIL. There aren't any config options and all paths are hardcoded for my system.
 Spare yourself some sanity/time and from lots of pain - this is not what you are looking for!
