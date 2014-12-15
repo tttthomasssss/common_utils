@@ -18,7 +18,7 @@ setup(
     version='0.0.1',
 
     description='Common Utils for all of my NLP stuff, if it is required in more than 2 projects, it will be dumped in here, independent of state/quality/alsdkfj.',
-    
+
     # The project's main homepage.
     url='https://github.com/pypa/sampleproject',
 
