@@ -17,7 +17,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
 from corpus_hacks.aptemod import AptemodIndex
 from corpus_hacks.rcv1 import RCV1Index
-from utils import paths
+
+from . import paths
 
 
 __REUTERS_APTEMOD__ = 'aptemod'
@@ -186,7 +187,7 @@ def fetch_vectorized_datasets_for_keys(keys, **kwargs):
 	return data
 
 
-def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_key, use_tfidf=True):
+def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_key, use_tfidf=True, return_raw=False):
 	vectorized_labelled_train = None
 	labels_train = None
 	vectorized_labelled_test = None
@@ -197,11 +198,16 @@ def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_k
 	test_data_name = '%s_%s_vectors_labelled_test' % (category_key, 'tfidf' if use_tfidf else 'count')
 	test_labels_name = '%s_labels_test' % (category_key,)
 
-	if (os.path.exists(os.path.join(dataset_path, train_data_name))):
+	raw_train_data_name = '%s_raw_labelled_train' % (category_key,)
+	raw_test_data_name = '%s_raw_labelled_test' % (category_key,)
+
+	if (os.path.exists(os.path.join(dataset_path, train_data_name)) and os.path.exists(os.path.join(dataset_path, raw_train_data_name))):
 		vectorized_labelled_train = joblib.load(os.path.join(dataset_path, train_data_name))
 		vectorized_labelled_test = joblib.load(os.path.join(dataset_path, test_data_name))
 		labels_train = joblib.load(os.path.join(dataset_path, train_labels_name))
 		labels_test = joblib.load(os.path.join(dataset_path, test_labels_name))
+		raw_train_data = joblib.load(os.path.join(dataset_path, raw_train_data_name))
+		raw_test_data = joblib.load(os.path.join(dataset_path, raw_test_data_name))
 	else:
 		dataset_categories = ['alt.atheism', 'comp.graphics', 'comp.os.ms-windows.misc', 'comp.sys.ibm.pc.hardware', 'comp.sys.mac.hardware', 'comp.windows.x', 'misc.forsale', 'rec.autos', 'rec.motorcycles', 'rec.sport.baseball', 'rec.sport.hockey', 'sci.crypt', 'sci.electronics', 'sci.med', 'sci.space', 'soc.religion.christian', 'talk.politics.guns', 'talk.politics.mideast', 'talk.politics.misc', 'talk.religion.misc']
 
@@ -234,6 +240,8 @@ def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_k
 				tfidf_vectors_test = tfidf_vectorizer.transform(test_bunch.data)
 				count_vectors_train = count_vectorizer.fit_transform(train_bunch.data)
 				count_vectors_test = count_vectorizer.transform(test_bunch.data)
+				raw_train_data = train_bunch.data
+				raw_test_data = test_bunch.data
 
 				curr_labels_train = np.array(train_bunch.target)
 				curr_labels_test = np.array(test_bunch.target)
@@ -247,6 +255,8 @@ def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_k
 				joblib.dump(curr_labels_test, os.path.join(dataset_path, curr_test_labels_name))
 				joblib.dump(count_vectorizer, os.path.join(dataset_path, curr_count_vectorizer_name))
 				joblib.dump(tfidf_vectorizer, os.path.join(dataset_path, curr_tfidf_vectorizer_name))
+				joblib.dump(train_bunch.data, os.path.join(dataset_path, raw_train_data_name))
+				joblib.dump(test_bunch.data, os.path.join(dataset_path, raw_test_data_name))
 
 				# Check if its the one we are looking for
 				if (category_key == '_'.join([prim_cat, sec_cat]) and use_tfidf):
@@ -260,6 +270,8 @@ def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_k
 					labels_train = curr_labels_train
 					labels_test = curr_labels_test
 
+	if (return_raw):
+		return (raw_train_data, labels_train, raw_test_data, labels_test)
 	return (vectorized_labelled_train, labels_train, vectorized_labelled_test, labels_test)
 
 
@@ -391,7 +403,7 @@ def fetch_toy_example_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_l
 
 	return (vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled) if not wrap_in_list else [(vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled)]
 
-def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, count_dtype=np.int64, tfidf_dtype=np.float64):
+def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, count_dtype=np.int64, tfidf_dtype=np.float64, return_raw=False):
 	vectorized_labelled_train = None
 	vectorized_labelled_test = None
 	vectorized_unlabelled = None
@@ -401,12 +413,15 @@ def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in
 	tfidf_vectorizer = TfidfVectorizer(decode_error='ignore', dtype=tfidf_dtype)
 	count_vectorizer = CountVectorizer(decode_error='ignore', dtype=count_dtype)
 
-	if (os.path.exists(os.path.join(dataset_path, 'tfidf_vectors_labelled_train' if use_tfidf else 'count_vectors_labelled_train'))):
+	if (os.path.exists(os.path.join(dataset_path, 'tfidf_vectors_labelled_train' if use_tfidf else 'count_vectors_labelled_train')) and os.path.exists(os.path.join(dataset_path, 'train_docs'))):
 		vectorized_labelled_train = joblib.load(os.path.join(dataset_path, 'tfidf_vectors_labelled_train' if use_tfidf else 'count_vectors_labelled_train'))
 		vectorized_labelled_test = joblib.load(os.path.join(dataset_path, 'tfidf_vectors_labelled_test' if use_tfidf else 'count_vectors_labelled_test'))
 		train_labels = joblib.load(os.path.join(dataset_path, 'labels_train'))
 		test_labels = joblib.load(os.path.join(dataset_path, 'labels_test'))
 		vectorized_unlabelled = joblib.load(os.path.join(dataset_path, 'tfidf_vectors_unlabelled' if use_tfidf else 'count_vectors_unlabelled'))
+		train_docs = joblib.load(os.path.join(dataset_path, 'train_docs'))
+		test_docs = joblib.load(os.path.join(dataset_path, 'test_docs'))
+		unlabelled_docs = joblib.load(os.path.join(dataset_path, 'unlabelled_docs'))
 	else:
 		if (os.path.exists(dataset_path)):
 			# Read training data
@@ -459,17 +474,23 @@ def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in
 			joblib.dump(count_vectors_unlabelled, os.path.join(dataset_path, 'count_vectors_unlabelled'))
 			joblib.dump(tfidf_vectorizer, os.path.join(dataset_path, 'tfidf_vectorizer'))
 			joblib.dump(count_vectorizer, os.path.join(dataset_path, 'count_vectorizer'))
-			pickle.dump(train_docs, open(os.path.join(dataset_path, 'train_docs'), 'w'))
-			pickle.dump(test_docs, open(os.path.join(dataset_path, 'test_docs'), 'w'))
-			pickle.dump(unlabelled_docs, open(os.path.join(dataset_path, 'unlabelled_docs'), 'w'))
+			#pickle.dump(train_docs, open(os.path.join(dataset_path, 'train_docs'), 'w'))
+			#pickle.dump(test_docs, open(os.path.join(dataset_path, 'test_docs'), 'w'))
+			#pickle.dump(unlabelled_docs, open(os.path.join(dataset_path, 'unlabelled_docs'), 'w'))
+			joblib.dump(train_docs, os.path.join(dataset_path, 'train_docs'))
+			joblib.dump(test_docs, os.path.join(dataset_path, 'test_docs'))
+			joblib.dump(unlabelled_docs, os.path.join(dataset_path, 'unlabelled_docs'))
 
 			vectorized_labelled_train = tfidf_vectors_labelled_train if use_tfidf else count_vectors_labelled_train
 			vectorized_labelled_test = tfidf_vectors_labelled_test if use_tfidf else count_vectors_labelled_test
 			vectorized_unlabelled = tfidf_vectors_unlabelled if use_tfidf else count_vectors_unlabelled
 
+	if (return_raw):
+		return (train_docs, train_labels, test_docs, test_labels, unlabelled_docs)
 	return (vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled) if not wrap_in_list else [(vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled)]
 
-def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False):
+
+def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, return_raw=False):
 	vectorized_labelled = None
 	labels = None
 
@@ -479,9 +500,10 @@ def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=True, w
 	# Check if cache exists
 	tail, _ = os.path.split(dataset_path)
 	cache_path = os.path.join(tail, 'tfidf_vectors' if use_tfidf else 'count_vectors')
-	if (os.path.exists(cache_path)):
+	if (os.path.exists(cache_path) and os.path.exists(os.path.join(tail, 'raw_data'))):
 		vectorized_labelled = joblib.load(cache_path)
 		labels = joblib.load(os.path.join(tail, 'labels'))
+		raw_data = joblib.load(os.path.join(tail, 'raw_data'))
 	else:
 		if (os.path.exists(dataset_path)):
 			label_dist = collections.defaultdict(int)
@@ -508,30 +530,38 @@ def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=True, w
 			json.dumps(label_dist, os.path.join(tail, 'label_distribution.json'))
 			joblib.dump(tfidf_vectorizer, os.path.join(dataset_path, 'tfidf_vectorizer'))
 			joblib.dump(count_vectorizer, os.path.join(dataset_path, 'count_vectorizer'))
-			pickle.dump(docs, open(os.path.join(dataset_path, 'docs'), 'w'))
+			#pickle.dump(docs, open(os.path.join(dataset_path, 'docs'), 'w'))
+			joblib.dump(docs, os.path.join(dataset_path, 'raw_data'))
 
 			vectorized_labelled = tfidf_labelled if use_tfidf else count_labelled
 
+	if (return_raw):
+		return raw_data, labels
 	return (vectorized_labelled, labels) if not wrap_in_list else [(vectorized_labelled, labels)]
 
-def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False):
+
+def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, return_raw=False, top_n_classes=5):
 	vectorized_labelled_train  = None
 	train_labels = None
 	vectorized_labelled_test = None
 	test_labels = None
 	vectorized_unlabelled = None
+	raw_labelled_train = None
+	raw_labelled_test = None
 
 	tfidf_vectorizer = TfidfVectorizer(decode_error='ignore')
 	count_vectorizer = CountVectorizer(decode_error='ignore')
 
 	# Check if cache exists
-	cache_path = os.path.join(dataset_path, 'tfidf_vectors_labelled_train' if use_tfidf else 'count_vectors_labelled_train')
-	if (os.path.exists(cache_path)):
+	cache_path = os.path.join(dataset_path, '%d_%s' % (top_n_classes, 'tfidf_vectors_labelled_train' if use_tfidf else 'count_vectors_labelled_train'))
+	if (os.path.exists(cache_path) and os.path.exists(os.path.join(dataset_path, 'raw_labelled_train'))):
 		vectorized_labelled_train = joblib.load(os.path.join(dataset_path, 'tfidf_vectors_labelled_train' if use_tfidf else 'count_vectors_labelled_train'))
 		vectorized_labelled_test = joblib.load(os.path.join(dataset_path, 'tfidf_vectors_labelled_test' if use_tfidf else 'count_vectors_labelled_test'))
 		vectorized_unlabelled = joblib.load(os.path.join(dataset_path, 'tfidf_vectors_unlabelled' if use_tfidf else 'count_vectors_unlabelled'))
 		train_labels = joblib.load(os.path.join(dataset_path, 'labels_train'))
 		test_labels = joblib.load(os.path.join(dataset_path, 'labels_test'))
+		raw_labelled_train = joblib.load(os.path.join(dataset_path, 'raw_labelled_train'))
+		raw_labelled_test = joblib.load(os.path.join(dataset_path, 'raw_labelled_test'))
 	else:
 		if (os.path.exists(dataset_path)):
 			aptemod_index = AptemodIndex(dataset_path)
@@ -539,6 +569,7 @@ def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=
 
 			# Hardcoded: fetch 10 largest categories, filter overlapping docs and docs not belonging to any of the target classes as in Lucas, Downey (2013)
 			target_names = ['earn', 'acq', 'money-fx', 'grain', 'crude', 'trade', 'interest', 'ship', 'wheat', 'corn']
+			target_names = target_names[:top_n_classes]
 			label_map = dict((value, key) for key, value in dict(enumerate(target_names)).iteritems())
 
 			# Training Data
@@ -613,28 +644,41 @@ def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=
 			joblib.dump(test_labels, os.path.join(dataset_path, 'labels_test'))
 			joblib.dump(tfidf_vectorizer, os.path.join(dataset_path, 'tfidf_vectorizer'))
 			joblib.dump(count_vectorizer, os.path.join(dataset_path, 'count_vectorizer'))
-			pickle.dump(train_docs, open(os.path.join(dataset_path, 'train_docs'), 'w'))
-			pickle.dump(test_docs, open(os.path.join(dataset_path, 'test_docs'), 'w'))
-			pickle.dump(unlabelled_docs, open(os.path.join(dataset_path, 'unlabelled_docs'), 'w'))
+			#pickle.dump(train_docs, open(os.path.join(dataset_path, 'train_docs'), 'w'))
+			#pickle.dump(test_docs, open(os.path.join(dataset_path, 'test_docs'), 'w'))
+			#pickle.dump(unlabelled_docs, open(os.path.join(dataset_path, 'unlabelled_docs'), 'w'))
+			joblib.dump(train_docs, os.path.join(dataset_path, 'raw_labelled_train'))
+			joblib.dump(test_docs, os.path.join(dataset_path, 'raw_labelled_test'))
+			joblib.dump(unlabelled_docs, os.path.join(dataset_path, 'raw_unlabelled'))
 
 			vectorized_labelled_train = tfidf_vectors_labelled_train if use_tfidf else count_vectors_labelled_train
 			vectorized_labelled_test = tfidf_vectors_labelled_test if use_tfidf else count_vectors_labelled_test
 			vectorized_unlabelled = tfidf_vectors_unlabelled if use_tfidf else count_vectors_unlabelled
 
+	if (return_raw):
+		return (raw_labelled_train, train_labels, raw_labelled_test, test_labels)
 	return (vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels) if not wrap_in_list else [(vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels)]
 
-def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False):
+
+def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, return_raw=False):
 	vectorized_labelled = None
 	labels = None
+	raw_labelled = None
 
 	tfidf_vectorizer = TfidfVectorizer(decode_error='ignore', tokenizer=lambda l: l.split())
 	count_vectorizer = CountVectorizer(decode_error='ignore', tokenizer=lambda l: l.split())
 
 	# Check if cache exists
 	cache_path = os.path.join(dataset_path, 'tfidf_vectors' if use_tfidf else 'count_vectors')
-	if (os.path.exists(cache_path)):
-		vectorized_labelled = joblib.load(cache_path)
+	path_exists = os.path.exists(cache_path) if not return_raw else os.path.exists(os.path.join(dataset_path, 'docs'))
+	if (path_exists):
 		labels = joblib.load(os.path.join(dataset_path, 'labels'))
+		if (not return_raw):
+			vectorized_labelled = joblib.load(cache_path)
+			raw_labelled = []
+		else:
+			vectorized_labelled = np.array([])
+			raw_labelled = joblib.load(os.path.join(dataset_path, 'docs'))
 	else:
 		if (os.path.exists(dataset_path)):
 			tail, _ = os.path.split(dataset_path)
@@ -673,15 +717,20 @@ def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=Fal
 			# Cache the stuff
 			cache_path = os.path.join(tail, 'rcv1')
 
+			raw_labelled = docs
+
 			joblib.dump(tfidf_labelled, os.path.join(cache_path, 'tfidf_vectors'))
 			joblib.dump(count_labelled, os.path.join(cache_path, 'count_vectors'))
 			joblib.dump(labels, os.path.join(cache_path, 'labels'))
 			joblib.dump(tfidf_vectorizer, os.path.join(dataset_path, 'tfidf_vectorizer'))
 			joblib.dump(count_vectorizer, os.path.join(dataset_path, 'count_vectorizer'))
-			pickle.dump(docs, open(os.path.join(dataset_path, 'docs'), 'w'))
+			#pickle.dump(docs, open(os.path.join(dataset_path, 'docs'), 'w'))
+			joblib.dump(docs, os.path.join(dataset_path, 'docs'))
 
 			vectorized_labelled = tfidf_labelled if use_tfidf else count_labelled
 
+	if (return_raw):
+		return (raw_labelled, labels)
 	return (vectorized_labelled, labels) if not wrap_in_list else [(vectorized_labelled, labels)]
 
 
@@ -774,19 +823,23 @@ def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tf
 	return (vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled, label_map, labelled_features, labelled_features_idx)
 
 
-def fetch_twitter_fyp_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True, wrap_in_list=False):
+def fetch_twitter_fyp_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True, wrap_in_list=False, return_raw=False):
 	vectorized_labelled = None
 	labels = None
 	vectorized_unlabelled = None
+	raw_labelled = None
+	raw_unlabelled = None
 
 	tfidf_vectorizer = TfidfVectorizer(decode_error='ignore')
 	count_vectorizer = CountVectorizer(decode_error='ignore')
 
 	# Check if cached stuff exists
-	if (os.path.exists(os.path.join(dataset_path, dataset_name, 'tfidf_vectors_labelled' if use_tfidf else 'count_vectors_labelled'))):
+	if (os.path.exists(os.path.join(dataset_path, dataset_name, 'tfidf_vectors_labelled' if use_tfidf else 'count_vectors_labelled')) and os.path.exists(os.path.join(dataset_path, dataset_name, 'raw_labelled_data'))):
 		vectorized_labelled = joblib.load(os.path.join(dataset_path, dataset_name, 'tfidf_vectors_labelled' if use_tfidf else 'count_vectors_labelled'))
 		labels = joblib.load(os.path.join(dataset_path, dataset_name, 'labels'))
 		vectorized_unlabelled = joblib.load(os.path.join(dataset_path, dataset_name, 'tfidf_vectors_unlabelled' if use_tfidf else 'count_vectors_unlabelled'))
+		raw_labelled = joblib.load(os.path.join(dataset_path, dataset_name, 'raw_labelled_data'))
+		raw_unlabelled = joblib.load(os.path.join(dataset_path, dataset_name, 'raw_unlabelled_data'))
 	else:
 		if (os.path.exists(os.path.join(dataset_path, dataset_name))):
 			data_file = '%s.pkz' % (dataset_name,)
@@ -811,8 +864,8 @@ def fetch_twitter_fyp_dataset_vectorized(dataset_path, dataset_name, use_tfidf=T
 				joblib.dump(labels, os.path.join(dataset_path, dataset_name, 'labels'))
 				joblib.dump(tfidf_vectorizer, os.path.join(dataset_path, dataset_name, 'tfidf_vectorizer'))
 				joblib.dump(count_vectorizer, os.path.join(dataset_path, dataset_name, 'count_vectorizer'))
-				pickle.dump(labelled_data, open(os.path.join(dataset_path, dataset_name, 'labelled_data'), 'w'))
-				pickle.dump(unlabelled_data, open(os.path.join(dataset_path, dataset_name, 'unlabelled_data'), 'w'))
+				#pickle.dump(labelled_data, open(os.path.join(dataset_path, dataset_name, 'labelled_data'), 'w'))
+				#pickle.dump(unlabelled_data, open(os.path.join(dataset_path, dataset_name, 'unlabelled_data'), 'w'))
 
 				# Cache raw
 				joblib.dump(labelled_data, os.path.join(dataset_path, dataset_name, 'raw_labelled_data'))
@@ -820,5 +873,8 @@ def fetch_twitter_fyp_dataset_vectorized(dataset_path, dataset_name, use_tfidf=T
 
 				vectorized_labelled = tfidf_vectors_labelled if use_tfidf else count_vectors_labelled
 				vectorized_unlabelled = tfidf_vectors_unlabelled if use_tfidf else count_vectors_unlabelled
+
+	if (return_raw):
+		return (raw_labelled, labels, raw_unlabelled)
 
 	return (vectorized_labelled, labels, vectorized_unlabelled) if not wrap_in_list else [(vectorized_labelled, labels, vectorized_unlabelled)]

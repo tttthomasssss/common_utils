@@ -2,6 +2,8 @@ __author__ = 'thomas'
 import os
 import socket
 
+PROJECT_PATH = os.path.dirname(os.path.dirname(__file__))
+
 __BASEPATH__ = {
 	'Thomas-Kobers-MacBook.local': os.path.expanduser('~/DevSandbox/InfiniteSandbox/tag-lab'),
 	'm011437.inf.susx.ac.uk': os.path.expanduser('~/DevSandbox/InfiniteSandbox/tag-lab')
