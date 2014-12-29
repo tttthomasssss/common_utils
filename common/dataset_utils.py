@@ -189,8 +189,10 @@ def fetch_vectorized_datasets_for_keys(keys, **kwargs):
 
 def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_key, use_tfidf=True, return_raw=False):
 	vectorized_labelled_train = None
+	raw_train_data = None
 	labels_train = None
 	vectorized_labelled_test = None
+	raw_test_data = None
 	labels_test = None
 
 	train_data_name = '%s_%s_vectors_labelled_train' % (category_key, 'tfidf' if use_tfidf else 'count')
@@ -201,13 +203,17 @@ def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_k
 	raw_train_data_name = '%s_raw_labelled_train' % (category_key,)
 	raw_test_data_name = '%s_raw_labelled_test' % (category_key,)
 
-	if (os.path.exists(os.path.join(dataset_path, train_data_name)) and os.path.exists(os.path.join(dataset_path, raw_train_data_name))):
-		vectorized_labelled_train = joblib.load(os.path.join(dataset_path, train_data_name))
-		vectorized_labelled_test = joblib.load(os.path.join(dataset_path, test_data_name))
+	path_exists = os.path.exists(os.path.join(dataset_path, train_data_name)) if not return_raw else os.path.exists(os.path.join(dataset_path, raw_train_data_name))
+
+	if (path_exists):
 		labels_train = joblib.load(os.path.join(dataset_path, train_labels_name))
 		labels_test = joblib.load(os.path.join(dataset_path, test_labels_name))
-		raw_train_data = joblib.load(os.path.join(dataset_path, raw_train_data_name))
-		raw_test_data = joblib.load(os.path.join(dataset_path, raw_test_data_name))
+		if (return_raw):
+			raw_train_data = joblib.load(os.path.join(dataset_path, raw_train_data_name))
+			raw_test_data = joblib.load(os.path.join(dataset_path, raw_test_data_name))
+		else:
+			vectorized_labelled_train = joblib.load(os.path.join(dataset_path, train_data_name))
+			vectorized_labelled_test = joblib.load(os.path.join(dataset_path, test_data_name))
 	else:
 		dataset_categories = ['alt.atheism', 'comp.graphics', 'comp.os.ms-windows.misc', 'comp.sys.ibm.pc.hardware', 'comp.sys.mac.hardware', 'comp.windows.x', 'misc.forsale', 'rec.autos', 'rec.motorcycles', 'rec.sport.baseball', 'rec.sport.hockey', 'sci.crypt', 'sci.electronics', 'sci.med', 'sci.space', 'soc.religion.christian', 'talk.politics.guns', 'talk.politics.mideast', 'talk.politics.misc', 'talk.religion.misc']
 
