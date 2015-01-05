@@ -528,16 +528,17 @@ def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=True, w
 			tfidf_labelled = tfidf_vectorizer.fit_transform(docs)
 			count_labelled = count_vectorizer.fit_transform(docs)
 			labels = np.array(targets)
+			raw_data = docs
 
 			# Cache the stuff
 			joblib.dump(tfidf_labelled, os.path.join(tail, 'tfidf_vectors'))
 			joblib.dump(count_labelled, os.path.join(tail, 'count_vectors'))
 			joblib.dump(labels, os.path.join(tail, 'labels'))
 			json.dumps(label_dist, os.path.join(tail, 'label_distribution.json'))
-			joblib.dump(tfidf_vectorizer, os.path.join(dataset_path, 'tfidf_vectorizer'))
-			joblib.dump(count_vectorizer, os.path.join(dataset_path, 'count_vectorizer'))
+			joblib.dump(tfidf_vectorizer, os.path.join(tail, 'tfidf_vectorizer'))
+			joblib.dump(count_vectorizer, os.path.join(tail, 'count_vectorizer'))
 			#pickle.dump(docs, open(os.path.join(dataset_path, 'docs'), 'w'))
-			joblib.dump(docs, os.path.join(dataset_path, 'raw_data'))
+			joblib.dump(docs, os.path.join(tail, 'raw_data'))
 
 			vectorized_labelled = tfidf_labelled if use_tfidf else count_labelled
 
