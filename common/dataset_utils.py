@@ -215,66 +215,71 @@ def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_k
 			vectorized_labelled_train = joblib.load(os.path.join(dataset_path, train_data_name))
 			vectorized_labelled_test = joblib.load(os.path.join(dataset_path, test_data_name))
 	else:
+		prim_cat = category_key.split('_')[0]
+		sec_cat = category_key.split('_')[1]
+
+		''' Gunshot all
 		dataset_categories = ['alt.atheism', 'comp.graphics', 'comp.os.ms-windows.misc', 'comp.sys.ibm.pc.hardware', 'comp.sys.mac.hardware', 'comp.windows.x', 'misc.forsale', 'rec.autos', 'rec.motorcycles', 'rec.sport.baseball', 'rec.sport.hockey', 'sci.crypt', 'sci.electronics', 'sci.med', 'sci.space', 'soc.religion.christian', 'talk.politics.guns', 'talk.politics.mideast', 'talk.politics.misc', 'talk.religion.misc']
 
 		for i in xrange(len(dataset_categories) - 1):
 			prim_cat = dataset_categories[i]
 			for j in xrange(i + 1, len(dataset_categories)):
 				sec_cat = dataset_categories[j]
+		'''
 
-				print '> CATEGORIES:', prim_cat, ' &', sec_cat
+		print '> CATEGORIES:', prim_cat, ' &', sec_cat
 
-				curr_tfidf_cat_key = '_'.join([prim_cat, sec_cat, 'tfidf'])
-				curr_count_cat_key = '_'.join([prim_cat, sec_cat, 'count'])
+		curr_tfidf_cat_key = '_'.join([prim_cat, sec_cat, 'tfidf'])
+		curr_count_cat_key = '_'.join([prim_cat, sec_cat, 'count'])
 
-				curr_tfidf_train_data_name = '%s_vectors_labelled_train' % (curr_tfidf_cat_key,)
-				curr_tfidf_test_data_name = '%s_vectors_labelled_test' % (curr_tfidf_cat_key,)
-				curr_count_train_data_name = '%s_vectors_labelled_train' % (curr_count_cat_key,)
-				curr_count_test_data_name = '%s_vectors_labelled_test' % (curr_count_cat_key,)
-				curr_test_labels_name = '%s_labels_test' % ('_'.join([prim_cat, sec_cat]),)
-				curr_train_labels_name = '%s_labels_train' % ('_'.join([prim_cat, sec_cat]),)
-				curr_count_vectorizer_name = 'count_vectorizer_%s' % ('_'.join([prim_cat, sec_cat]),)
-				curr_tfidf_vectorizer_name = 'tfidf_vectorizer_%s' % ('_'.join([prim_cat, sec_cat]),)
+		curr_tfidf_train_data_name = '%s_vectors_labelled_train' % (curr_tfidf_cat_key,)
+		curr_tfidf_test_data_name = '%s_vectors_labelled_test' % (curr_tfidf_cat_key,)
+		curr_count_train_data_name = '%s_vectors_labelled_train' % (curr_count_cat_key,)
+		curr_count_test_data_name = '%s_vectors_labelled_test' % (curr_count_cat_key,)
+		curr_test_labels_name = '%s_labels_test' % ('_'.join([prim_cat, sec_cat]),)
+		curr_train_labels_name = '%s_labels_train' % ('_'.join([prim_cat, sec_cat]),)
+		curr_count_vectorizer_name = 'count_vectorizer_%s' % ('_'.join([prim_cat, sec_cat]),)
+		curr_tfidf_vectorizer_name = 'tfidf_vectorizer_%s' % ('_'.join([prim_cat, sec_cat]),)
 
-				tfidf_vectorizer = TfidfVectorizer()
-				count_vectorizer = CountVectorizer()
+		tfidf_vectorizer = TfidfVectorizer()
+		count_vectorizer = CountVectorizer()
 
-				train_bunch = fetch_20newsgroups(subset='train', categories=[prim_cat, sec_cat])
-				test_bunch = fetch_20newsgroups(subset='test', categories=[prim_cat, sec_cat])
+		train_bunch = fetch_20newsgroups(subset='train', categories=[prim_cat, sec_cat])
+		test_bunch = fetch_20newsgroups(subset='test', categories=[prim_cat, sec_cat])
 
-				tfidf_vectors_train = tfidf_vectorizer.fit_transform(train_bunch.data)
-				tfidf_vectors_test = tfidf_vectorizer.transform(test_bunch.data)
-				count_vectors_train = count_vectorizer.fit_transform(train_bunch.data)
-				count_vectors_test = count_vectorizer.transform(test_bunch.data)
-				raw_train_data = train_bunch.data
-				raw_test_data = test_bunch.data
+		tfidf_vectors_train = tfidf_vectorizer.fit_transform(train_bunch.data)
+		tfidf_vectors_test = tfidf_vectorizer.transform(test_bunch.data)
+		count_vectors_train = count_vectorizer.fit_transform(train_bunch.data)
+		count_vectors_test = count_vectorizer.transform(test_bunch.data)
+		raw_train_data = train_bunch.data
+		raw_test_data = test_bunch.data
 
-				curr_labels_train = np.array(train_bunch.target)
-				curr_labels_test = np.array(test_bunch.target)
+		curr_labels_train = np.array(train_bunch.target)
+		curr_labels_test = np.array(test_bunch.target)
 
-				# Cache the stuff
-				joblib.dump(tfidf_vectors_train, os.path.join(dataset_path, curr_tfidf_train_data_name))
-				joblib.dump(count_vectors_train, os.path.join(dataset_path, curr_count_train_data_name))
-				joblib.dump(tfidf_vectors_test, os.path.join(dataset_path, curr_tfidf_test_data_name))
-				joblib.dump(count_vectors_test, os.path.join(dataset_path, curr_count_test_data_name))
-				joblib.dump(curr_labels_train, os.path.join(dataset_path, curr_train_labels_name))
-				joblib.dump(curr_labels_test, os.path.join(dataset_path, curr_test_labels_name))
-				joblib.dump(count_vectorizer, os.path.join(dataset_path, curr_count_vectorizer_name))
-				joblib.dump(tfidf_vectorizer, os.path.join(dataset_path, curr_tfidf_vectorizer_name))
-				joblib.dump(train_bunch.data, os.path.join(dataset_path, raw_train_data_name))
-				joblib.dump(test_bunch.data, os.path.join(dataset_path, raw_test_data_name))
+		# Cache the stuff
+		joblib.dump(tfidf_vectors_train, os.path.join(dataset_path, curr_tfidf_train_data_name))
+		joblib.dump(count_vectors_train, os.path.join(dataset_path, curr_count_train_data_name))
+		joblib.dump(tfidf_vectors_test, os.path.join(dataset_path, curr_tfidf_test_data_name))
+		joblib.dump(count_vectors_test, os.path.join(dataset_path, curr_count_test_data_name))
+		joblib.dump(curr_labels_train, os.path.join(dataset_path, curr_train_labels_name))
+		joblib.dump(curr_labels_test, os.path.join(dataset_path, curr_test_labels_name))
+		joblib.dump(count_vectorizer, os.path.join(dataset_path, curr_count_vectorizer_name))
+		joblib.dump(tfidf_vectorizer, os.path.join(dataset_path, curr_tfidf_vectorizer_name))
+		joblib.dump(raw_train_data, os.path.join(dataset_path, raw_train_data_name))
+		joblib.dump(raw_test_data, os.path.join(dataset_path, raw_test_data_name))
 
-				# Check if its the one we are looking for
-				if (category_key == '_'.join([prim_cat, sec_cat]) and use_tfidf):
-					vectorized_labelled_train = tfidf_vectors_train
-					vectorized_labelled_test = tfidf_vectors_test
-					labels_train = curr_labels_train
-					labels_test = curr_labels_test
-				elif (category_key == '_'.join([prim_cat, sec_cat]) and not use_tfidf):
-					vectorized_labelled_train = count_vectors_train
-					vectorized_labelled_test = count_vectors_test
-					labels_train = curr_labels_train
-					labels_test = curr_labels_test
+		# Check if its the one we are looking for
+		if (category_key == '_'.join([prim_cat, sec_cat]) and use_tfidf):
+			vectorized_labelled_train = tfidf_vectors_train
+			vectorized_labelled_test = tfidf_vectors_test
+			labels_train = curr_labels_train
+			labels_test = curr_labels_test
+		elif (category_key == '_'.join([prim_cat, sec_cat]) and not use_tfidf):
+			vectorized_labelled_train = count_vectors_train
+			vectorized_labelled_test = count_vectors_test
+			labels_train = curr_labels_train
+			labels_test = curr_labels_test
 
 	if (return_raw):
 		return (raw_train_data, labels_train, raw_test_data, labels_test)
