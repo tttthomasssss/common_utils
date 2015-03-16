@@ -4,20 +4,31 @@ __author__ = 'thk22'
 import math
 
 from scipy import sparse
+from sklearn.base import BaseEstimator
 from sklearn.utils.extmath import safe_sparse_dot
 import numpy as np
 
+from algorithms.semi_supervised import semi_supervised_frequency_estimate
+from utils.safe_sparse_ops import safe_add
 
-class NaiveBayesSmoothing(object):
+
+class NaiveBayesSmoothing(object): # TODO: Convert to Smoothing Mixin
 	@staticmethod
 	def lidstone_smoothing(fcc, alpha=1.):
-		fcc += alpha
-		ncc = fcc.sum(axis=1).reshape(-1, 1)
+		fcc = safe_add(fcc, alpha)
+		try:
+			ncc = fcc.sum(axis=1).reshape(-1, 1)
+		except ValueError:
+			ncc = fcc.sum()
+
 		return (fcc / ncc), (np.log(fcc) - np.log(ncc))
 
 	@staticmethod
 	def lidstone_smoothing_no_renormalisation(fcc, alpha=1.): # <-- Similar to the prior_smoothing but it is uniform
-		ncc = fcc.sum(axis=1).reshape(-1, 1)
+		try:
+			ncc = fcc.sum(axis=1).reshape(-1, 1)
+		except ValueError:
+			ncc = fcc.sum()
 		fcc += (alpha / fcc.shape[0])
 
 		return (fcc / ncc), (np.log(fcc) - np.log(ncc))
@@ -85,7 +96,7 @@ class NaiveBayesSmoothing(object):
 		return damping_factor_vocab
 
 
-class NaiveBayesClassifier(object):
+class NaiveBayesClassifier(BaseEstimator):
 
 	def __init__(self, smoothing_fn=NaiveBayesSmoothing.lidstone_smoothing, **kwargs):
 		self.classes_ = None
@@ -95,7 +106,7 @@ class NaiveBayesClassifier(object):
 		self.probs_ = None
 		self.log_probs_ = None
 		self.smoothing_fn_ = smoothing_fn
-		self.smoothing_args_ = kwargs.pop('smoothing_args', 1.)
+		self.smoothing_args_ = kwargs.pop('smoothing_args', (1.,))
 
 	def fit(self, X, y, fit_priors=True):
 		X = self._to_csr(X)
@@ -111,6 +122,39 @@ class NaiveBayesClassifier(object):
 
 	def predict_proba(self, X):
 		return self._joint_log_likelihood(X)
+
+	def estimate_evidence(self, ranked_label_idx, use_log_probs=True):
+
+		E = self._estimate_log_prob_evidence(ranked_label_idx) if use_log_probs else self._estimate_prob_evidence(ranked_label_idx)
+
+		'''
+		# Evidence for 1 instance at a time
+		EE = np.zeros((ranked_label_idx.shape[0], 2))
+		for idx, curr_label_ranking in enumerate(ranked_label_idx):
+			mlc_log_evidence_idx = np.where((self.log_probs_[curr_label_ranking[0]] - self.log_probs_[curr_label_ranking[1]]) > 0.)[0]
+			smlc_log_evidence_idx = np.where((self.log_probs_[curr_label_ranking[1]] - self.log_probs_[curr_label_ranking[0]]) > 0.)[0]
+
+			mlc_log_evidence = (self.log_probs_[curr_label_ranking[0]][mlc_log_evidence_idx] - self.log_probs_[curr_label_ranking[1]][mlc_log_evidence_idx]).sum()
+			smlc_log_evidence = (self.log_probs_[curr_label_ranking[1]][smlc_log_evidence_idx] - self.log_probs_[curr_label_ranking[0]][smlc_log_evidence_idx]).sum()
+
+			EE[idx, 0] = mlc_log_evidence
+			EE[idx, 1] = smlc_log_evidence
+
+			print 'MLC EVIDENCE=%.2f; SMLC EVIDENCE=%.2f' % (mlc_log_evidence, smlc_log_evidence)
+		'''
+
+		return E
+
+	def sfe_fit(self, X, y, Z):
+		self.fit(X, y)
+
+		pw_l, _ = self.smoothing_fn_(self.feature_counts_.sum(axis=0), *self.smoothing_args_)
+		pw_Z, = (Z.sum(axis=0) + np.ones(X.shape[1])) / (Z.sum() + X.shape[1]) #self.smoothing_fn_(Z, *self.smoothing_args_)
+
+		sfe_enum = np.multiply(((self.probs_ * self.priors_.reshape(2, 1)) / pw_l), pw_Z)
+		sfe_denom = sfe_enum.sum(axis=1)
+
+		self.probs_, self.log_probs_ = (sfe_enum / sfe_denom), np.log(sfe_enum) - np.log(sfe_denom)
 
 	def _to_csr(self, X):
 		if (sparse.isspmatrix_csr(X)):
@@ -158,28 +202,6 @@ class NaiveBayesClassifier(object):
 
 		return E
 
-	def estimate_evidence(self, ranked_label_idx, use_log_probs=True):
-
-		E = self._estimate_log_prob_evidence(ranked_label_idx) if use_log_probs else self._estimate_prob_evidence(ranked_label_idx)
-
-		'''
-		# Evidence for 1 instance at a time
-		EE = np.zeros((ranked_label_idx.shape[0], 2))
-		for idx, curr_label_ranking in enumerate(ranked_label_idx):
-			mlc_log_evidence_idx = np.where((self.log_probs_[curr_label_ranking[0]] - self.log_probs_[curr_label_ranking[1]]) > 0.)[0]
-			smlc_log_evidence_idx = np.where((self.log_probs_[curr_label_ranking[1]] - self.log_probs_[curr_label_ranking[0]]) > 0.)[0]
-
-			mlc_log_evidence = (self.log_probs_[curr_label_ranking[0]][mlc_log_evidence_idx] - self.log_probs_[curr_label_ranking[1]][mlc_log_evidence_idx]).sum()
-			smlc_log_evidence = (self.log_probs_[curr_label_ranking[1]][smlc_log_evidence_idx] - self.log_probs_[curr_label_ranking[0]][smlc_log_evidence_idx]).sum()
-
-			EE[idx, 0] = mlc_log_evidence
-			EE[idx, 1] = smlc_log_evidence
-
-			print 'MLC EVIDENCE=%.2f; SMLC EVIDENCE=%.2f' % (mlc_log_evidence, smlc_log_evidence)
-		'''
-
-		return E
-
 	def _fit_priors(self, y, fit_priors):
 		self.priors_ = np.bincount(y) / y.sum() if (fit_priors) else np.ones(np.unique(y).shape) * (1 / np.unique(y).shape[0])
 		self.classes_ = np.arange(self.priors_.shape[0])
@@ -192,7 +214,7 @@ class NaiveBayesClassifier(object):
 		for y_i in self.classes_:
 			self.feature_counts_[y_i, :] = X[np.where(y == y_i)].sum(axis=0)
 
-		self.probs_, self.log_probs_ = self.smoothing_fn_(self.feature_counts_, *self.smoothing_args_ )
+		self.probs_, self.log_probs_ = self.smoothing_fn_(self.feature_counts_, *self.smoothing_args_)
 
 	def _joint_log_likelihood(self, X):
 		return safe_sparse_dot(X, self.log_probs_.T) + self.log_priors_
