@@ -4,6 +4,7 @@ __author__ = 'thk22'
 import math
 
 from scipy import sparse
+from scipy.optimize import newton
 from sklearn.base import BaseEstimator
 from sklearn.utils.extmath import safe_sparse_dot
 import numpy as np
@@ -15,11 +16,8 @@ from utils.safe_sparse_ops import safe_add
 class NaiveBayesSmoothing(object): # TODO: Convert to Smoothing Mixin
 	@staticmethod
 	def lidstone_smoothing(fcc, alpha=1.):
-		fcc = safe_add(fcc, alpha)
-		try:
-			ncc = fcc.sum(axis=1).reshape(-1, 1)
-		except ValueError:
-			ncc = fcc.sum()
+		fcc += alpha
+		ncc = fcc.sum(axis=1).reshape(-1, 1)
 
 		return (fcc / ncc), (np.log(fcc) - np.log(ncc))
 
@@ -96,17 +94,114 @@ class NaiveBayesSmoothing(object): # TODO: Convert to Smoothing Mixin
 		return damping_factor_vocab
 
 
-class NaiveBayesClassifier(BaseEstimator):
+class NaiveBayesSmoothingMixin(object):
+	def lidstone_smoothing(self,
+						   fcc, alpha=1.):
+		if (sparse.issparse(fcc)):
+			fcc, ncc = self._sparse_lidstone_smoothing(fcc, alpha)
+		else:
+			fcc += alpha
+			try:
+				ncc = fcc.sum(axis=1).reshape(-1, 1)
+			except ValueError:
+				ncc = fcc.sum()
 
-	def __init__(self, smoothing_fn=NaiveBayesSmoothing.lidstone_smoothing, **kwargs):
+		return (fcc / ncc), (np.log(fcc) - np.log(ncc))
+
+	def _sparse_lidstone_smoothing(self, fcc, alpha):
+		return fcc.sum(axis=0) + np.full(fcc.shape[1], alpha), fcc.sum() + (alpha * fcc.shape[1])
+
+	def lidstone_smoothing_token_scaling(self, fcc, alpha=1.):
+		damping_factor = self.calc_lidstone_damping_factor_tokens(vocab_size=fcc.shape[1], n_tokens=fcc.sum(), alpha=alpha)
+
+		return self.lidstone_smoothing(fcc, (1 / damping_factor))
+
+	def lidstone_smoothing_vocab_scaling(self, fcc, alpha=1.):
+		damping_factor = self.calc_lidstone_damping_factor_vocab(vocab_size=fcc.shape[1], sample_vocab_size=np.count_nonzero(fcc.sum(axis=0)), alpha=alpha)
+
+		return self.lidstone_smoothing(fcc, (1 / damping_factor))
+
+	def lidstone_smoothing_no_renormalisation(self, fcc, alpha=1.): # <-- Similar to the prior_smoothing but it is uniform
+		try:
+			ncc = fcc.sum(axis=1).reshape(-1, 1)
+		except ValueError:
+			ncc = fcc.sum()
+		fcc += (alpha / fcc.shape[0])
+
+		return (fcc / ncc), (np.log(fcc) - np.log(ncc))
+
+	def jelinek_mercer_smoothing(self, fcc, lambada=0.5, p_w=None):
+		p_w_given_c = (fcc / fcc.sum(axis=1).reshape(-1, 1)) * (1 - lambada)
+		p_w = ((fcc.sum(axis=0) / fcc.sum()).reshape(1, -1) * lambada) if p_w is None else p_w * lambada
+
+		return (p_w + p_w_given_c), np.nan_to_num(np.log(p_w + p_w_given_c))
+
+	def prior_smoothing(self, fcc, mu=0.95): # <-- I have no idea why this works, but it works better than anything else
+		p_c = (fcc.sum(axis=1).reshape(-1, 1) / fcc.sum())
+
+		enum = (fcc + (mu * p_c))
+		denom = (fcc.sum(axis=1).reshape(-1, 1))
+		p_w_given_c = enum / denom
+
+		return p_w_given_c, np.log(enum) - np.log(denom)
+
+	def dirichlet_smoothing(self, fcc, mu=0.95, p_w=None):
+		#p_w = (fcc.sum(axis=1).reshape(-1, 1) / fcc.sum())
+		p_w = (fcc.sum(axis=0) / fcc.sum()).reshape(1, -1) if p_w is None else p_w
+		p_w_given_c = (fcc + (mu * p_w)) / ((fcc + mu).sum(axis=1).reshape(-1, 1))
+		log_p_w_given_c = np.log(fcc + (mu * p_w)) - np.log((fcc + mu).sum(axis=1).reshape(-1, 1))
+
+		return p_w_given_c, log_p_w_given_c
+
+	def absolute_discounting(self, fcc, sigma=0.6, p_w=None):
+		p_w = (fcc.sum(axis=0) / fcc.sum()).reshape(1, -1) if p_w is None else p_w
+
+		num_unique_w = np.zeros((fcc.shape[0], 1))
+		for row_idx in np.arange(fcc.shape[0]):
+			num_unique_w[row_idx] = np.count_nonzero(fcc[row_idx])
+
+		p_w_given_c = (np.maximum(fcc - sigma, 0.) + (np.dot((sigma * np.asmatrix(num_unique_w)), p_w))) / (fcc.sum(axis=1).reshape(-1, 1))
+
+		return p_w_given_c, np.nan_to_num(np.log(p_w_given_c))
+
+	def two_stage_smoothing(self, fcc, lambada=0.6, mu=100, p_w=None):
+		p_w = (fcc.sum(axis=0) / fcc.sum()).reshape(1, -1) if p_w is None else p_w
+
+		dirichlet_stage, _ = NaiveBayesSmoothing.dirichlet_smoothing(fcc, mu, p_w)
+
+		p_w_given_c = ((1 - lambada) * dirichlet_stage) + (lambada * p_w)
+
+		return p_w_given_c, np.nan_to_num(np.log(p_w_given_c))
+
+	def calc_lidstone_damping_factor_tokens(self, vocab_size, n_tokens, alpha=1.):
+		damping_magnitude_tokens = math.floor(math.log10(vocab_size * alpha)) / math.floor(math.log10(n_tokens))
+		damping_factor_tokens = 10 ** damping_magnitude_tokens
+
+		return damping_factor_tokens
+
+	def calc_lidstone_damping_factor_vocab(self, vocab_size, sample_vocab_size, alpha=1.):
+		damping_magnitude_vocab = math.floor(math.log10(vocab_size * alpha)) / math.floor(math.log10(sample_vocab_size))
+		damping_factor_vocab = 10 ** damping_magnitude_vocab
+
+		return damping_factor_vocab
+
+
+class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
+
+	def __init__(self, *args, **kwargs):
+
+		self.smoothing_fn_ = kwargs.pop('smoothing_fn', self.lidstone_smoothing)
+		self.smoothing_args_ = kwargs.pop('smoothing_args', (1.,))
+
+		super(NaiveBayesClassifier, self).__init__(*args, **kwargs)
+
 		self.classes_ = None
 		self.priors_ = None
 		self.log_priors_ = None
 		self.feature_counts_ = None
 		self.probs_ = None
 		self.log_probs_ = None
-		self.smoothing_fn_ = smoothing_fn
-		self.smoothing_args_ = kwargs.pop('smoothing_args', (1.,))
+
 
 	def fit(self, X, y, fit_priors=True):
 		X = self._to_csr(X)
@@ -145,16 +240,70 @@ class NaiveBayesClassifier(BaseEstimator):
 
 		return E
 
-	def sfe_fit(self, X, y, Z):
+	def sfe_fit(self, X, y, Z): #TODO: Implement SFE/FM as Mixins?
 		self.fit(X, y)
 
 		pw_l, _ = self.smoothing_fn_(self.feature_counts_.sum(axis=0), *self.smoothing_args_)
-		pw_Z, = (Z.sum(axis=0) + np.ones(X.shape[1])) / (Z.sum() + X.shape[1]) #self.smoothing_fn_(Z, *self.smoothing_args_)
+		pw_Z, _ = self.smoothing_fn_(Z, *self.smoothing_args_)
 
 		sfe_enum = np.multiply(((self.probs_ * self.priors_.reshape(2, 1)) / pw_l), pw_Z)
 		sfe_denom = sfe_enum.sum(axis=1)
 
 		self.probs_, self.log_probs_ = (sfe_enum / sfe_denom), np.log(sfe_enum) - np.log(sfe_denom)
+
+	def fm_fit(self, X, y, Z):
+		self.fit(X, y)
+
+		if (len(self.classes_) > 2):
+			raise NotImplementedError('fm_fit() is only applicable to binary problems at the moment!')
+
+		pt_L = self.feature_counts_.sum(axis=1) / self.feature_counts_.sum()
+		pw_Z, _ = self.smoothing_fn_(Z, *self.smoothing_args_)
+
+		# Shorthands K, l
+		l = pt_L[0] / pt_L[1]
+		K = pw_Z / pt_L[1]
+
+		# Target Interval
+		target_interval_max = pw_Z / pt_L[0]
+
+		# Starting points
+		x0 = [2, 3, 1.5, 4]
+
+		# word count per class pre-computed
+		n_w_pos_sum, n_w_neg_sum = self.feature_counts_[0].sum(), self.feature_counts_[1].sum()
+
+		# Optimisation
+		for i in xrange(self.feature_counts_.shape[1]):
+			if (self.feature_counts_[0, i] > 0 and self.feature_counts_[1, i] > 0):
+				n_w_pos = self.feature_counts_[0, i]
+				n_w_neg = self.feature_counts_[1, i]
+				n_not_w_pos = n_w_pos_sum - n_w_pos
+				n_not_w_neg = n_w_neg_sum - n_w_neg
+
+				j = 0
+				opt_val = -1
+				while (j < len(x0) and not (opt_val > 0 and opt_val <= target_interval_max[0, i])):
+					try:
+						opt_val = newton(self._optimise_feature_marginals, (target_interval_max[0, i] / x0[j]), args=(K[0, i], l, n_w_pos, n_w_neg, n_not_w_pos, n_not_w_neg), tol=1e-07, maxiter=100)
+					except RuntimeError: # failed to converge, returns NaN
+						opt_val = -1
+					finally:
+						j += 1
+
+				if (opt_val > 0 and opt_val <= target_interval_max[0, i]):
+					self.probs_[0, i] = opt_val
+					self.probs_[1, i] = (pw_Z[0, i] - (opt_val * pt_L[0])) / pt_L[1]
+
+		# Re-normalise
+		self.probs_ /= self.probs_.sum(axis=1).reshape(2, 1)
+		self.log_probs_ = np.log(self.probs_)
+
+	def _optimise_feature_marginals(self, p_w_pos, k, l, n_w_pos, n_w_neg, n_not_w_pos, n_not_w_neg):
+		return 	(n_w_pos / p_w_pos) + \
+				(n_not_w_pos / (p_w_pos - 1)) + \
+				((n_w_neg * l) / ((l * p_w_pos) - k)) + \
+				((l * n_not_w_neg) / ((l * p_w_pos) - k + 1))
 
 	def _to_csr(self, X):
 		if (sparse.isspmatrix_csr(X)):
