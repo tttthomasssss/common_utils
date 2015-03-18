@@ -9,9 +9,6 @@ from sklearn.base import BaseEstimator
 from sklearn.utils.extmath import safe_sparse_dot
 import numpy as np
 
-from algorithms.semi_supervised import semi_supervised_frequency_estimate
-from utils.safe_sparse_ops import safe_add
-
 
 class NaiveBayesSmoothing(object): # TODO: Convert to Smoothing Mixin
 	@staticmethod
@@ -251,7 +248,7 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 
 		self.probs_, self.log_probs_ = (sfe_enum / sfe_denom), np.log(sfe_enum) - np.log(sfe_denom)
 
-	def fm_fit(self, X, y, Z):
+	def fm_fit(self, X, y, Z, maxiter=50, tol=1e-10):
 		self.fit(X, y)
 
 		if (len(self.classes_) > 2):
@@ -285,7 +282,7 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 				opt_val = -1
 				while (j < len(x0) and not (opt_val > 0 and opt_val <= target_interval_max[0, i])):
 					try:
-						opt_val = newton(self._optimise_feature_marginals, (target_interval_max[0, i] / x0[j]), args=(K[0, i], l, n_w_pos, n_w_neg, n_not_w_pos, n_not_w_neg), tol=1e-07, maxiter=100)
+						opt_val = newton(self._optimise_feature_marginals, (target_interval_max[0, i] / x0[j]), args=(K[0, i], l, n_w_pos, n_w_neg, n_not_w_pos, n_not_w_neg), tol=tol, maxiter=maxiter)
 					except RuntimeError: # failed to converge, returns NaN
 						opt_val = -1
 					finally:
