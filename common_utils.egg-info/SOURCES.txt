@@ -1,4 +1,8 @@
 setup.py
+algorithms/__init__.py
+algorithms/semi_supervised.py
+classifiers/__init__.py
+classifiers/naive_bayes.py
 common/__init__.py
 common/dataset_utils.py
 common/paths.py
@@ -16,3 +20,5 @@ preprocessing/__init__.py
 preprocessing/data_preparation.py
 preprocessing/twokenize.py
 preprocessing/twormalize.py
+utils/__init__.py
+utils/safe_sparse_ops.py

@@ -54,7 +54,7 @@ class EMWeightingSchemeMixin(object):
 		H = -((y_prob * np.log(y_prob)).sum(axis=1))
 
 		# Convert uncertainty to certainty
-		H = 1 - H
+		H = np.nan_to_num(1 - H)
 
 		# Re-normalise the weights
 		H /= np.amax(H)
@@ -65,7 +65,7 @@ class EMWeightingSchemeMixin(object):
 		# Apply multiplicative weighting factor
 		H *= alpha
 
-		return H
+		return H if np.max(H) > 0 else self.alpha_weighting(H)
 
 	def prediction_weighting(self, y_prob, alpha=1., confidence_correction=0.):
 		return np.maximum(y_prob - confidence_correction, 0.) * alpha
