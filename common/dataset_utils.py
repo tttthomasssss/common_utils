@@ -323,7 +323,7 @@ def fetch_20newsgroups_dataset_vectorized(dataset_path, use_tfidf=True, extracti
 
 	if (os.path.exists(os.path.join(dataset_path, tfidf_vectors_train_name if use_tfidf else count_vectors_test_name))):
 		vectorized_labelled_train = joblib.load(os.path.join(dataset_path, tfidf_vectors_train_name if use_tfidf else count_vectors_train_name))
-		vectorized_labelled_test = joblib.load(os.path.join(dataset_path, tfidf_vectors_test_name if use_tfidf else count_vectors_train_name))
+		vectorized_labelled_test = joblib.load(os.path.join(dataset_path, tfidf_vectors_test_name if use_tfidf else count_vectors_test_name))
 		labels_train = joblib.load(os.path.join(dataset_path, 'train_labels'))
 		labels_test = joblib.load(os.path.join(dataset_path, 'test_labels'))
 	else:
