@@ -763,8 +763,9 @@ def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=Fal
 			targets = list()
 
 			# TODO: Build label map from all categories, then select documents and vectorize, then get on with other datasets and EM papers
+			archive_path = dataset_path if dataset_path.endswith('RCV1.txt.bz2') else os.path.join(dataset_path, 'RCV1.txt.bz2')
 
-			with bz2.BZ2File(dataset_path, 'r') as rcv1_compressed:
+			with bz2.BZ2File(archive_path, 'r') as rcv1_compressed:
 				for line in rcv1_compressed:
 
 					comps = line.split('\t') # 0=doc_id, 1=mattis_label, 2=timestamp, 3=document
@@ -795,8 +796,8 @@ def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=Fal
 			joblib.dump(tfidf_labelled, os.path.join(cache_path, tfidf_vectors_name))
 			joblib.dump(count_labelled, os.path.join(cache_path, count_vectors_name))
 			joblib.dump(labels, os.path.join(cache_path, 'labels'))
-			joblib.dump(tfidf_vectorizer, os.path.join(dataset_path, 'tfidf_vectorizer'))
-			joblib.dump(count_vectorizer, os.path.join(dataset_path, 'count_vectorizer'))
+			#joblib.dump(tfidf_vectorizer, os.path.join(dataset_path, 'tfidf_vectorizer'))
+			#joblib.dump(count_vectorizer, os.path.join(dataset_path, 'count_vectorizer'))
 			#pickle.dump(docs, open(os.path.join(dataset_path, 'docs'), 'w'))
 			joblib.dump(docs, os.path.join(dataset_path, 'docs'))
 
