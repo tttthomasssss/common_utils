@@ -808,6 +808,96 @@ def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=Fal
 	return (vectorized_labelled, labels) if not wrap_in_list else [(vectorized_labelled, labels)]
 
 
+def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True, extraction_style='all', binarize=False):
+	vectorized_labelled_train = None
+	train_labels = None
+	vectorized_labelled_test = None
+	test_labels = None
+	vectorized_unlabelled = None
+	label_map = None
+	labelled_features = None
+	vocab = None
+
+	tfidf_labelled_train_name = 'tfidf_vectors_labelled_train' + extraction_style if extraction_style != None else ''
+	tfidf_labelled_test_name = 'tfidf_vectors_labelled_test' + extraction_style if extraction_style != None else ''
+	tfidf_unlabelled_name = 'tfidf_vectors_unlabelled' + extraction_style if extraction_style != None else ''
+	count_labelled_train_name = 'count_vectors_labelled_train' + extraction_style if extraction_style != None else ''
+	count_labelled_test_name = 'count_vectors_labelled_test' + extraction_style if extraction_style != None else ''
+	count_unlabelled_test_name = 'count_vectors_unlabelled' + extraction_style if extraction_style != None else ''
+
+	if (binarize):
+		tfidf_labelled_train_name += '_binary'
+		tfidf_labelled_test_name += '_binary'
+		tfidf_unlabelled_name += '_binary'
+		count_labelled_train_name += '_binary'
+		count_labelled_test_name += '_binary'
+		count_unlabelled_test_name += '_binary'
+
+	# Check if cached stuff exists
+	if (os.path.exists(os.path.join(dataset_path, dataset_name, tfidf_labelled_train_name if use_tfidf else count_labelled_train_name))):
+		vectorized_labelled_train = joblib.load(os.path.join(dataset_path, dataset_name, tfidf_labelled_train_name if use_tfidf else count_labelled_train_name))
+		train_labels = joblib.load(os.path.join(dataset_path, dataset_name, 'train_labels'))
+		vectorized_labelled_test = joblib.load(os.path.join(dataset_path, dataset_name, tfidf_labelled_test_name if use_tfidf else count_labelled_test_name))
+		test_labels = joblib.load(os.path.join(dataset_path, dataset_name, 'test_labels'))
+		vectorized_unlabelled = joblib.load(os.path.join(dataset_path, dataset_name, tfidf_unlabelled_name if use_tfidf else count_unlabelled_test_name))
+		label_map = joblib.load(os.path.join(dataset_path, dataset_name, 'label_map'))
+		labelled_features = joblib.load(os.path.join(dataset_path, dataset_name, 'labelled_features'))
+	else:
+		if (os.path.exists(os.path.join(dataset_path, dataset_name))):
+			raw_labelled_train = joblib.load(os.path.join(dataset_path, dataset_name, 'raw_training_docs'))
+			raw_train_labels = joblib.load(os.path.join(dataset_path, dataset_name, 'raw_training_labels'))
+			raw_labelled_test = joblib.load(os.path.join(dataset_path, dataset_name, 'raw_gold_standard_docs'))
+			raw_test_labels = joblib.load(os.path.join(dataset_path, dataset_name, 'raw_gold_standard_labels'))
+			raw_unlabelled = joblib.load(os.path.join(dataset_path, dataset_name, 'raw_unlabelled_docs'))
+			vocab = joblib.load(os.path.join(dataset_path, dataset_name, 'vocab'))
+			labelled_features = joblib.load(os.path.join(dataset_path, dataset_name, 'labelled_features'))
+			label_map = joblib.load(os.path.join(dataset_path, dataset_name, 'label_map'))
+
+			tfidf_vectorizer = TfidfVectorizer(decode_error='replace')
+			count_vectorizer = CountVectorizer(decode_error='replace', binary=binarize)
+			transformer = TfidfTransformer(use_idf=False)
+
+			if (extraction_style == 'all'):
+				all_data = raw_labelled_train + raw_unlabelled
+				tfidf_vectorizer.fit(all_data)
+				count_vectorizer.fit(all_data)
+			else:
+				tfidf_vectorizer.fit(raw_labelled_train)
+				count_vectorizer.fit(raw_labelled_train)
+
+			tfidf_vectors_labelled_train = tfidf_vectorizer.transform(raw_labelled_train)
+			count_vectors_labelled_train = transformer.fit_transform(count_vectorizer.transform(raw_labelled_train))
+
+			tfidf_vectors_labelled_test = tfidf_vectorizer.transform(raw_labelled_test)
+			count_vectors_labelled_test = transformer.fit_transform(count_vectorizer.transform(raw_labelled_test))
+
+			tfidf_vectors_unlabelled = tfidf_vectorizer.transform(raw_unlabelled)
+			count_vectors_unlabelled = transformer.fit_transform(count_vectorizer.transform(raw_unlabelled))
+
+			train_labels = np.array(raw_train_labels)
+			test_labels = np.array(raw_test_labels)
+
+			# Cache the stuff
+			joblib.dump(tfidf_vectors_labelled_train, os.path.join(dataset_path, dataset_name, tfidf_labelled_train_name))
+			joblib.dump(tfidf_vectors_labelled_test, os.path.join(dataset_path, dataset_name, tfidf_labelled_test_name))
+			joblib.dump(tfidf_vectors_unlabelled, os.path.join(dataset_path, dataset_name, tfidf_unlabelled_name))
+
+			joblib.dump(count_vectors_labelled_train, os.path.join(dataset_path, dataset_name, count_labelled_train_name))
+			joblib.dump(count_vectors_labelled_test, os.path.join(dataset_path, dataset_name, count_labelled_test_name))
+			joblib.dump(count_vectors_unlabelled, os.path.join(dataset_path, dataset_name, count_unlabelled_test_name))
+
+			joblib.dump(train_labels, os.path.join(dataset_path, dataset_name, 'train_labels'))
+			joblib.dump(test_labels, os.path.join(dataset_path, dataset_name, 'test_labels'))
+			joblib.dump(label_map, os.path.join(dataset_path, dataset_name, 'label_map'))
+
+			vectorized_labelled_train = tfidf_vectors_labelled_train if use_tfidf else count_vectors_labelled_train
+			vectorized_labelled_test = tfidf_vectors_labelled_test if use_tfidf else count_vectors_labelled_test
+			vectorized_unlabelled = tfidf_vectors_unlabelled if use_tfidf else count_vectors_unlabelled
+
+	return (vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled,
+			label_map, labelled_features, vocab)
+
+
 def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True, extraction_style='all', binarize=False):
 	vectorized_labelled_train = None
 	train_labels = None
@@ -872,7 +962,7 @@ def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tf
 				tfidf_vectorizer.fit(labelled_train)
 				count_vectorizer.fit(labelled_train)
 
-			tfidf_vectors_labelled_train = tfidf_vectorizer.fit_transform(train_data)
+			tfidf_vectors_labelled_train = tfidf_vectorizer.transform(train_data)
 			count_vectors_labelled_train = transformer.fit_transform(count_vectorizer.transform(train_data))
 
 			tfidf_vectors_labelled_test = tfidf_vectorizer.transform(test_data)

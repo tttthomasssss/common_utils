@@ -4,6 +4,8 @@ from sklearn.base import BaseEstimator
 from sklearn.naive_bayes import MultinomialNB
 import numpy as np
 
+from . import instance_selection
+
 
 class EMWeightingSchemeMixin(object):
 
@@ -73,11 +75,44 @@ class EMWeightingSchemeMixin(object):
 
 class ExpectationMaximization(BaseEstimator, EMWeightingSchemeMixin):
 	def __init__(self, *args, **kwargs):
-		classifier_args = kwargs.pop('classifier_args', [])
+		classifier_args = kwargs.pop('classifier_args', ())
 		classifier_kwargs = kwargs.pop('classifier_kwargs', {})
-		self.clf_ = kwargs.pop('classifier', MultinomialNB(*classifier_args, **classifier_kwargs))
+		#self.clf_ = kwargs.pop('classifier', MultinomialNB(*classifier_args, **classifier_kwargs))
+		KhlavKalash = kwargs.pop('classifier', MultinomialNB)
+
+		self.clf_ = KhlavKalash(*classifier_args, **classifier_kwargs)
 
 		super(ExpectationMaximization, self).__init__(*args, **kwargs)
+
+	# TODO: Put in a Mixin(?)
+	def fit_multi_stage(self, X, y, Z, stages=2, max_iter=1, use_max=False, sample_weighting_scheme='alpha', **weighting_scheme_kwargs):
+		weight_fn, fit_fn = self._select_fns(sample_weighting_scheme)
+
+		# Step 1: Model Initialisation
+		self.clf_.fit(X, y)
+
+		for _ in xrange(max_iter):
+			stage_chunk_size = int(Z.shape[0] / stages)
+			stage_chunk_offset = 0
+			to_label_idx = instance_selection.margin_of_confidence_ranking(self.clf_, Z, ordering='desc', with_evidence=True)
+
+			for __ in xrange(stages):
+				# TODO: Second loop, only select highly MSU ones first, then gradually adding in LSU ones
+
+				# Step 2: Generating probabilistic labels for the unlabelled data
+				y_prob = self.clf_.predict_proba(Z[to_label_idx[stage_chunk_offset:stage_chunk_offset + stage_chunk_size]])
+
+				stage_chunk_offset += stage_chunk_size + 1
+
+				# Step 2.1: Apply weighting scheme
+				weights = weight_fn(y_prob, **weighting_scheme_kwargs)
+
+				# Step 3: Retrain classifier on all data
+				#	Step 3.1 Retrain on labelled data
+				self.clf_.partial_fit(X, y)
+
+				# 	Step 3.2 Retrain on probabilistically labelled data
+				self.clf_ = fit_fn(Z, y_prob, self.clf_, weights, use_max=use_max)
 
 	def fit(self, X, y, Z, max_iter=1, use_max=False, sample_weighting_scheme='alpha', **weighting_scheme_kwargs):
 		"""

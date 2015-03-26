@@ -1,6 +1,6 @@
 __author__ = 'thk22'
 from datetime import datetime
 
-
-def timestamped_foldername(format='%d%m%Y_%H%M%S'):
+# incl timestamp: format='%d%m%Y_%H%M%S'
+def timestamped_foldername(format='%d%m%Y'):
 	return datetime.now().strftime(format)

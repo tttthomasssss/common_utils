@@ -1,11 +1,12 @@
 from __future__ import division
 __author__ = 'thk22'
-
+import itertools
 import math
 
 from scipy import sparse
 from scipy.optimize import newton
 from sklearn.base import BaseEstimator
+from sklearn.utils.extmath import logsumexp
 from sklearn.utils.extmath import safe_sparse_dot
 import numpy as np
 
@@ -213,11 +214,18 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 		return self.classes_[np.argmax(jll, axis=1)]
 
 	def predict_proba(self, X):
-		return self._joint_log_likelihood(X)
+		return np.exp(self.predict_log_proba(X))
 
-	def estimate_evidence(self, ranked_label_idx, use_log_probs=True):
+	def predict_log_proba(self, X):
+		jll = self._joint_log_likelihood(X)
+		# normalize by P(x) = P(f_1, ..., f_n)
+		log_prob_x = logsumexp(jll, axis=1)
 
-		E = self._estimate_log_prob_evidence(ranked_label_idx) if use_log_probs else self._estimate_prob_evidence(ranked_label_idx)
+		return jll - np.atleast_2d(log_prob_x).T
+
+	def estimate_evidence(self, ranked_label_idx, Z, use_log_probs=True):
+
+		E = self._estimate_log_prob_evidence(ranked_label_idx, Z) if use_log_probs else self._estimate_prob_evidence(ranked_label_idx, Z)
 
 		'''
 		# Evidence for 1 instance at a time
@@ -243,7 +251,7 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 		pw_l, _ = self.smoothing_fn_(self.feature_counts_.sum(axis=0), *self.smoothing_args_)
 		pw_Z, _ = self.smoothing_fn_(Z, *self.smoothing_args_)
 
-		sfe_enum = np.multiply(((self.probs_ * self.priors_.reshape(2, 1)) / pw_l), pw_Z)
+		sfe_enum = np.multiply(((self.probs_ * self.priors_.reshape(len(self.classes_), 1)) / pw_l), pw_Z)
 		sfe_denom = sfe_enum.sum(axis=1)
 
 		self.probs_, self.log_probs_ = (sfe_enum / sfe_denom), np.log(sfe_enum) - np.log(sfe_denom)
@@ -253,6 +261,9 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 
 		if (len(self.classes_) > 2):
 			raise NotImplementedError('fm_fit() is only applicable to binary problems at the moment!')
+
+		if (len(self.classes_) < 2):
+			raise ValueError('Only 1 class present, fm_fit() requires 2!')
 
 		pt_L = self.feature_counts_.sum(axis=1) / self.feature_counts_.sum()
 		pw_Z, _ = self.smoothing_fn_(Z, *self.smoothing_args_)
@@ -310,27 +321,48 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 		else: # i.e. numpy arrays/ndmatrices
 			return sparse.csr_matrix(X)
 
+	def _evidence_per_instance(self, ranked_label_idx, Z):
+		E_log = np.zeros((ranked_label_idx.shape[0], 2))
+
+		for row_idx, (rank_idx, z) in enumerate(itertools.izip(ranked_label_idx, Z)):
+			E_log[row_idx, 0] = np.maximum(self.log_probs_[rank_idx[0], z.nonzero()[1]] - self.log_probs_[rank_idx[1], z.nonzero()[1]], 0.).sum()
+			E_log[row_idx, 1] = np.maximum(self.log_probs_[rank_idx[1], z.nonzero()[1]] - self.log_probs_[rank_idx[0], z.nonzero()[1]], 0.).sum()
+
+		return E_log
+
 	# Margin of Confidence
-	def _estimate_log_prob_evidence(self, ranked_label_idx):
-		# Evidence sets for most-likely class and second most-likely class; (the un-indexed equations in section D. of Sharma & Bilgic (2013))
-		mlc_log_evidence_delta = self.log_probs_[ranked_label_idx[:, 0]] - self.log_probs_[ranked_label_idx[:, 1]]
-		smlc_log_evidence_delta = self.log_probs_[ranked_label_idx[:, 1]] - self.log_probs_[ranked_label_idx[:, 0]]
+	def _estimate_log_prob_evidence(self, ranked_label_idx, Z):
+		# Evidence sets per instance for most-likely class and second most-likely class; (the un-indexed equations in section D. of Sharma & Bilgic (2013))
+		''' Takes about a minute
+		E_log = np.zeros((ranked_label_idx.shape[0], 2))
 
-		mlc_log_evidence_idx = np.where(mlc_log_evidence_delta > 0.)
-		smlc_log_evidence_idx = np.where(smlc_log_evidence_delta > 0.)
+		import time
+		print time.time()
 
-		# Actual per-instance evidence (equations 17 & 18 in Sharma & Bilgic (2013))
-		mlc_log_evidence = np.zeros(mlc_log_evidence_delta.shape)
-		mlc_log_evidence[mlc_log_evidence_idx] = mlc_log_evidence_delta[mlc_log_evidence_idx]
-		smlc_log_evidence = np.zeros(smlc_log_evidence_delta.shape)
-		smlc_log_evidence[smlc_log_evidence_idx] = smlc_log_evidence_delta[smlc_log_evidence_idx]
+		for row_idx, (rank_idx, z) in enumerate(itertools.izip(ranked_label_idx, Z)):
+			E_log[row_idx, 0] = np.maximum(self.log_probs_[rank_idx[0], z.nonzero()[1]] - self.log_probs_[rank_idx[1], z.nonzero()[1]], 0.).sum()
+			E_log[row_idx, 1] = np.maximum(self.log_probs_[rank_idx[1], z.nonzero()[1]] - self.log_probs_[rank_idx[0], z.nonzero()[1]], 0.).sum()
 
-		E = mlc_log_evidence.sum(axis=1) + smlc_log_evidence.sum(axis=1)
+		print time.time()
+		E = E_log.sum(axis=1)
+		'''
+		import time
+		print time.time()
+		MLC = np.zeros((ranked_label_idx.shape[0], Z.shape[1]))
+		SMLC = np.zeros((ranked_label_idx.shape[0], Z.shape[1]))
+
+		MLC[Z.nonzero()] = self.log_probs_[ranked_label_idx[:, 0]][Z.nonzero()]
+		SMLC[Z.nonzero()] = self.log_probs_[ranked_label_idx[:, 1]][Z.nonzero()]
+
+		E = np.maximum(MLC - SMLC, 0.).sum(axis=1)
+
+		self.log_probs_[rank]
+		print time.time()
 
 		return E
 
 	# Margin of Confidence
-	def _estimate_prob_evidence(self, ranked_label_idx):
+	def _estimate_prob_evidence(self, ranked_label_idx, Z):
 		# Evidence sets for most-likely class and second most-likely class; (the un-indexed equations in section D. of Sharma & Bilgic (2013))
 		mlc_evidence_delta = self.probs_[ranked_label_idx[:, 0]] / self.probs_[ranked_label_idx[:, 1]]
 		smlc_evidence_delta = self.probs_[ranked_label_idx[:, 1]] / self.probs_[ranked_label_idx[:, 0]]
