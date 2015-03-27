@@ -88,8 +88,10 @@ def load_raw_model_data(model_name):
 
 	cur.execute("""SELECT * FROM `%s` WHERE id NOT IN (%s);""" % (datasource['document_source'], not_in_ids_str))
 
+	data_idx = 1 if datasource['document_source'].startswith('tweets') else 2
+
 	for row in cur:
-		unlabelled_docs.append(row[1])
+		unlabelled_docs.append(row[data_idx])
 
 	# Create Paths
 	out_path = os.path.join(paths.get_dataset_path(), 'ws_paper', model_name)
@@ -118,7 +120,12 @@ def convert_raw_model_data(model_name):
 if (__name__ == '__main__'):
 	#models = ['clacton-master-filtered', 'floodingbtr', 'alessia-cameron2', 'cameronboocheer']
 	#models = ['isisenglishsubvertednot', 'nato1', 'amessagefromisustous-subversion']
-	models = ['duggan-relevent-no-news', 'nato2subjects']
+	#models = ['duggan-relevent-no-news', 'nato2subjects']
+	#models = ['wow-misogyny-terms-uk-sw', 'immigtation-sw-cameron', 'Immigration_extendedtermsrelevancy', 'duggan-main', 'allmales-filtered2', 'shellfiltration', 'duggan-relevant-verdict-comment', 'isis-kafir-english-relev', 'miliband', 'wow-abusive-or-not']
+	#models = ['cleggfaragesearchrelevencytest', 'floodingbtr5', 'bigdebatespeakersplitter-posneg', 'wow-rape-news']
+	#models = ['bigdebatespeakersplitter']
+	models = ['clacton-users-parties']
+
 
 	for m in models:
 		print 'Processing %s...' % (m,)

@@ -46,7 +46,7 @@ def _calculate_gold_standard_label_distribution(labels, sample_labels):
 	return label_distro
 
 
-def print_stats_for_models_at_path(p, min_unlabelled=0, min_labelled_training=0, min_gold_standard=0):
+def print_stats_for_models_at_path(p, min_unlabelled=0, min_labelled_training=0, min_gold_standard=0, min_num_labels=0):
 	db_credentials = json.load(open(os.path.join(PROJECT_PATH, 'private_resources', 'mysql_credentials.json')))
 
 	model_stats = {}
@@ -88,7 +88,7 @@ def print_stats_for_models_at_path(p, min_unlabelled=0, min_labelled_training=0,
 				num_gold_standard = len(labelling['sample_labels'])
 				gold_standard_label_distribution = _calculate_gold_standard_label_distribution(labels, labelling['sample_labels'])
 
-				if (num_unlabelled > min_unlabelled and num_labelled_training > min_labelled_training and num_gold_standard > min_gold_standard):
+				if (num_unlabelled > min_unlabelled and num_labelled_training > min_labelled_training and num_gold_standard > min_gold_standard and num_labels > min_num_labels):
 					model_stats[model_name]['num_unlabelled'] = num_unlabelled
 					model_stats[model_name]['num_labels'] = num_labels
 					model_stats[model_name]['labels'] = labels
@@ -110,5 +110,5 @@ def print_stats_for_models_at_path(p, min_unlabelled=0, min_labelled_training=0,
 	print json.dumps(model_stats)
 
 if (__name__ == '__main__'):
-	print_stats_for_models_at_path(os.path.join(paths.get_dataset_path(), 'method51', 'models'), min_unlabelled=50000, min_labelled_training=200, min_gold_standard=150)
-	print_stats_for_models_at_path(os.path.join(paths.get_dataset_path(), 'method51', 'models-1'), min_unlabelled=50000, min_labelled_training=200, min_gold_standard=150)
+	print_stats_for_models_at_path(os.path.join(paths.get_dataset_path(), 'method51', 'models'), min_num_labels=4)
+	print_stats_for_models_at_path(os.path.join(paths.get_dataset_path(), 'method51', 'models-1'), min_num_labels=4)
