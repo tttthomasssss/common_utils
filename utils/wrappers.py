@@ -12,24 +12,24 @@ def lidstone_smoothing_no_renormalisation(fcc, alpha): # <-- Similar to the prio
 	return NaiveBayesSmoothing.lidstone_smoothing_no_renormalisation(fcc, alpha)
 
 
-def jelinek_mercer_smoothing(fcc, lambada):
-	return NaiveBayesSmoothing.jelinek_mercer_smoothing(fcc, lambada)
+def jelinek_mercer_smoothing(fcc, lambada, p_w=None):
+	return NaiveBayesSmoothing.jelinek_mercer_smoothing(fcc, lambada, p_w=p_w)
 
 
 def prior_smoothing(fcc, mu): # <-- I have no idea why this works, but it works better than anything else
 	return NaiveBayesSmoothing.prior_smoothing(fcc, mu)
 
 
-def dirichlet_smoothing(fcc, mu):
-	return NaiveBayesSmoothing.dirichlet_smoothing(fcc, mu)
+def dirichlet_smoothing(fcc, mu, p_w=None):
+	return NaiveBayesSmoothing.dirichlet_smoothing(fcc, mu, p_w=p_w)
 
 
-def absolute_discounting(fcc, sigma):
-	return NaiveBayesSmoothing.absolute_discounting(fcc, sigma)
+def absolute_discounting(fcc, sigma, p_w=None):
+	return NaiveBayesSmoothing.absolute_discounting(fcc, sigma, p_w=p_w)
 
 
-def two_stage_smoothing(fcc, lambada, mu):
-	return NaiveBayesSmoothing.two_stage_smoothing(fcc, lambada, mu)
+def two_stage_smoothing(fcc, lambada, mu, p_w=None):
+	return NaiveBayesSmoothing.two_stage_smoothing(fcc, lambada, mu, p_w=p_w)
 
 
 def calc_lidstone_damping_factor_tokens(vocab_size, n_tokens, alpha):

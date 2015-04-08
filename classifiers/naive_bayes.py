@@ -53,7 +53,7 @@ class NaiveBayesSmoothing(object): # TODO: Convert to Smoothing Mixin
 		p_w_given_c = (fcc + (mu * p_w)) / ((fcc + mu).sum(axis=1).reshape(-1, 1))
 		log_p_w_given_c = np.log(fcc + (mu * p_w)) - np.log((fcc + mu).sum(axis=1).reshape(-1, 1))
 
-		return p_w_given_c, log_p_w_given_c
+		return p_w_given_c, np.nan_to_num(log_p_w_given_c)
 
 	@staticmethod
 	def absolute_discounting(fcc, sigma=0.6, p_w=None):
@@ -392,7 +392,9 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 		for y_i in self.classes_:
 			self.feature_counts_[y_i, :] = X[np.where(y == y_i)].sum(axis=0)
 
-		self.probs_, self.log_probs_ = self.smoothing_fn_(self.feature_counts_, *self.smoothing_args_)
+		#self.probs_, self.log_probs_ = self.smoothing_fn_(self.feature_counts_, *self.smoothing_args_)
+		args = (self.feature_counts_,) + self.smoothing_args_
+		self.probs_, self.log_probs_ = self.smoothing_fn_(*args)
 
 	def _joint_log_likelihood(self, X):
 		return safe_sparse_dot(X, self.log_probs_.T) + self.log_priors_
