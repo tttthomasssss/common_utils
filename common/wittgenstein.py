@@ -1,5 +1,6 @@
 __author__ = 'thk22'
 from importlib import import_module
+import collections
 '''
 Who's your favourite Metaphysician?
 '''
@@ -16,7 +17,7 @@ def create_instance(fully_qualified_name, **kwargs):
 
 
 def create_function(fully_qualified_name):
-	if (callable(fully_qualified_name)):
+	if (isinstance(fully_qualified_name, collections.Callable)):
 		return fully_qualified_name
 
 	module_name, function_name = fully_qualified_name.rsplit('.', 1)

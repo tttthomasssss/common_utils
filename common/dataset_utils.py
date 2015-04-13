@@ -231,7 +231,7 @@ def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_k
 				sec_cat = dataset_categories[j]
 		'''
 
-		print '> CATEGORIES:', prim_cat, ' &', sec_cat
+		print('> CATEGORIES:', prim_cat, ' &', sec_cat)
 
 		curr_tfidf_cat_key = '_'.join([prim_cat, sec_cat, 'tfidf'])
 		curr_count_cat_key = '_'.join([prim_cat, sec_cat, 'count'])
@@ -378,7 +378,7 @@ def fetch_webkb_dataset_vectorized(dataset_path, use_tfidf=True, extraction_styl
 					soup = BeautifulSoup(str(open(file_path).readlines()))
 					content = soup.get_text(' ', strip=True).replace(r'\r', '').replace(r'\n', '')
 					#TODO: When time, get rid of the headers....
-					print 'CONTENT:', content
+					print('CONTENT:', content)
 
 	return (vectorized_train, train_labels)
 
@@ -402,11 +402,11 @@ def fetch_toy_example_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_l
 			count_vectorizer = CountVectorizer()
 			transformer = TfidfTransformer(use_idf=False)
 
-			labelled_train = map(lambda d: d.strip(), open(os.path.join(dataset_path, 'labelled_train_docs.txt')).readlines())
-			labelled_test = map(lambda d: d.strip(), open(os.path.join(dataset_path, 'labelled_test_docs.txt')).readlines())
-			unlabelled = map(lambda d: d.strip(), open(os.path.join(dataset_path, 'unlabelled_docs.txt')).readlines())
-			train_labels = np.array(map(lambda l: l.strip(), open(os.path.join(dataset_path, 'train_labels.txt')).readlines()))
-			test_labels = np.array(map(lambda l: l.strip(), open(os.path.join(dataset_path, 'test_labels.txt')).readlines()))
+			labelled_train = [d.strip() for d in open(os.path.join(dataset_path, 'labelled_train_docs.txt')).readlines()]
+			labelled_test = [d.strip() for d in open(os.path.join(dataset_path, 'labelled_test_docs.txt')).readlines()]
+			unlabelled = [d.strip() for d in open(os.path.join(dataset_path, 'unlabelled_docs.txt')).readlines()]
+			train_labels = np.array([l.strip() for l in open(os.path.join(dataset_path, 'train_labels.txt')).readlines()])
+			test_labels = np.array([l.strip() for l in open(os.path.join(dataset_path, 'test_labels.txt')).readlines()])
 
 			tfidf_vectors_train = tfidf_vectorizer.fit_transform(labelled_train)
 			tfidf_vectors_test = tfidf_vectorizer.transform(labelled_test)
@@ -476,7 +476,7 @@ def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in
 			test_path = os.path.join(dataset_path, 'test')
 			unlabelled_path = os.path.join(dataset_path, 'train', 'unsup')
 			target_names = ['pos', 'neg']
-			label_map = dict((value, key) for key, value in dict(enumerate(target_names)).iteritems())
+			label_map = dict((value, key) for key, value in dict(enumerate(target_names)).items())
 			train_targets = list()
 			test_targets = list()
 			train_docs = list()
@@ -566,7 +566,7 @@ def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=True, w
 		if (os.path.exists(dataset_path)):
 			label_dist = collections.defaultdict(int)
 			target_names = ['ham', 'spam']
-			label_map = dict((value, key) for key, value in dict(enumerate(target_names)).iteritems())
+			label_map = dict((value, key) for key, value in dict(enumerate(target_names)).items())
 			docs = list()
 			targets = list()
 			with open(dataset_path, 'r') as raw_dataset:
@@ -636,7 +636,7 @@ def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=
 			# Hardcoded: fetch 10 largest categories, filter overlapping docs and docs not belonging to any of the target classes as in Lucas, Downey (2013)
 			target_names = ['earn', 'acq', 'money-fx', 'grain', 'crude', 'trade', 'interest', 'ship', 'wheat', 'corn']
 			target_names = target_names[:top_n_classes]
-			label_map = dict((value, key) for key, value in dict(enumerate(target_names)).iteritems())
+			label_map = dict((value, key) for key, value in dict(enumerate(target_names)).items())
 
 			# Training Data
 			train_corpus = open(os.path.join(dataset_path, 'aptemod_train.tsv'))
@@ -758,7 +758,7 @@ def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=Fal
 
 			# Hardcoded: fetch 5 largest categories, filter overlapping docs and docs not belonging to any of the target classes as in Lucas, Downey (2013)
 			target_names = ['CCAT', 'GCAT', 'MCAT', 'ECAT', 'GPOL']
-			label_map = dict((value, key) for key, value in dict(enumerate(target_names)).iteritems())
+			label_map = dict((value, key) for key, value in dict(enumerate(target_names)).items())
 			docs = list()
 			targets = list()
 
@@ -940,15 +940,15 @@ def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tf
 			unlabelled = json.load(open(os.path.join(dataset_path, dataset_name, '-'.join([dataset_name, 'unlabelled.json']))))
 			model = json.load(open(os.path.join(dataset_path, dataset_name, 'nbmodel.json')))
 
-			label_map = dict((value, key) for key, value in dict(enumerate(model['labels'])).iteritems())
-			train_targets = map(lambda x: label_map[x['label']], labelled_train)
-			test_targets = map(lambda x: label_map[x['label']], labelled_test)
-			train_data = map(lambda x: x['text'], labelled_train)
-			test_data = map(lambda x: x['text'], labelled_test)
-			unlabelled_data = map(lambda x: x['text'], unlabelled)
+			label_map = dict((value, key) for key, value in dict(enumerate(model['labels'])).items())
+			train_targets = [label_map[x['label']] for x in labelled_train]
+			test_targets = [label_map[x['label']] for x in labelled_test]
+			train_data = [x['text'] for x in labelled_train]
+			test_data = [x['text'] for x in labelled_test]
+			unlabelled_data = [x['text'] for x in unlabelled]
 
 			# In the method51 framework, bigrams are represented w1_w2, so we need to replace the underscore with a space again (thats messy but good enough for now...)
-			vocab = map(lambda v: v if not '_' in v else string.replace(v, '_', ' '), model['vocab'])
+			vocab = [v if not '_' in v else string.replace(v, '_', ' ') for v in model['vocab']]
 
 			tfidf_vectorizer = TfidfVectorizer(decode_error='replace', ngram_range=(1, 2), vocabulary=vocab)
 			count_vectorizer = CountVectorizer(decode_error='replace', ngram_range=(1, 2), vocabulary=vocab, binary=binarize)
@@ -974,10 +974,10 @@ def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tf
 			labelled_features = {}
 			labelled_features_idx = {}
 			for l in model['labels']:
-				if (l in model['labelFeatureAlphas'].keys()):
-					labelled_features[l] = model['labelFeatureAlphas'][l].keys()
+				if (l in list(model['labelFeatureAlphas'].keys())):
+					labelled_features[l] = list(model['labelFeatureAlphas'][l].keys())
 					idx_list = []
-					for feat in model['labelFeatureAlphas'][l].keys():
+					for feat in list(model['labelFeatureAlphas'][l].keys()):
 						clean_feat = string.replace(feat, '_', ' ')
 						if (clean_feat in count_vectorizer.get_feature_names()):
 							idx_list.append(count_vectorizer.get_feature_names().index(clean_feat))

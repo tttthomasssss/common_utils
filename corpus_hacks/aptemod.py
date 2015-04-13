@@ -38,37 +38,37 @@ class AptemodIndex(object):
 		self._subset_distribution[subset] += 1
 
 	def store_index(self):
-		print 'Storing Doc Index...'
+		print('Storing Doc Index...')
 		doc_idx_file = open(os.path.join(self._aptemod_base_path, 'doc_idx.json'), 'w')
 		json.dump(self._doc_index, doc_idx_file)
 		doc_idx_file.close()
 
-		print 'Storing Topic Index...'
+		print('Storing Topic Index...')
 		topic_idx_file = open(os.path.join(self._aptemod_base_path, 'topic_idx.json'), 'w')
 		json.dump(self._topic_index, topic_idx_file)
 		topic_idx_file.close()
 
-		print 'Storing Topic Distribution...'
+		print('Storing Topic Distribution...')
 		topic_distribution_file = open(os.path.join(self._aptemod_base_path, 'topic_distribution.json'), 'w')
 		json.dump(self._topic_distribution, topic_distribution_file)
 		topic_distribution_file.close()
 
-		print 'Storing Country Index...'
+		print('Storing Country Index...')
 		country_idx_file = open(os.path.join(self._aptemod_base_path, 'country_idx.json'), 'w')
 		json.dump(self._country_index, country_idx_file)
 		country_idx_file.close()
 
-		print 'Storing Country Distribution...'
+		print('Storing Country Distribution...')
 		country_distro_file = open(os.path.join(self._aptemod_base_path, 'country_distribution.json'), 'w')
 		json.dump(self._country_distribution, country_distro_file)
 		country_distro_file.close()
 
-		print 'Storing Subset Index...'
+		print('Storing Subset Index...')
 		subset_idx_file = open(os.path.join(self._aptemod_base_path, 'subset_idx.json'), 'w')
 		json.dump(self._subset_index, subset_idx_file)
 		subset_idx_file.close()
 
-		print 'Storing Subset Distribution...'
+		print('Storing Subset Distribution...')
 		subset_distro_file = open(os.path.join(self._aptemod_base_path, 'subset_distribution.json'), 'w')
 		json.dump(self._subset_distribution, subset_distro_file)
 		subset_distro_file.close()

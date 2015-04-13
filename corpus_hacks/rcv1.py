@@ -74,30 +74,30 @@ class RCV1Index(object):
 			self._industry_index[industry].append(doc_id)
 
 	def store_index(self):
-		print 'Storing Doc Index...'
+		print('Storing Doc Index...')
 		doc_idx_file = open(os.path.join(self._rcv_base_path, 'doc_idx.json'), 'w')
 		json.dump(self._doc_index, doc_idx_file)
 		doc_idx_file.close()
 
-		print 'Storing Topic Index...'
+		print('Storing Topic Index...')
 		topic_idx_file = open(os.path.join(self._rcv_base_path, 'topic_idx.json'), 'w')
 		json.dump(self._topic_index, topic_idx_file)
 		topic_idx_file.close()
 
-		print 'Storing Industry Index...'
+		print('Storing Industry Index...')
 		industry_idx_file = open(os.path.join(self._rcv_base_path, 'industry_idx.json'), 'w')
 		json.dump(self._industry_index, industry_idx_file)
 		industry_idx_file.close()
 
-		print 'Storing Country Index...'
+		print('Storing Country Index...')
 		country_idx_file = open(os.path.join(self._rcv_base_path, 'country_idx.json'), 'w')
 		json.dump(self._country_index, country_idx_file)
 		country_idx_file.close()
 
 	def print_all(self):
-		print 'DOC INDEX:', self._doc_index
-		print 'TOPIC INDEX:', self._topic_index
-		print 'COUNTRY INDEX:', self._country_index
+		print('DOC INDEX:', self._doc_index)
+		print('TOPIC INDEX:', self._topic_index)
+		print('COUNTRY INDEX:', self._country_index)
 
 def create_rcv1_index(rcv_path, verbose=False):
 	rcv_cds = [os.path.join(rcv_path, 'cd1'), os.path.join(rcv_path, 'cd2')]
@@ -127,7 +127,7 @@ def create_rcv1_index(rcv_path, verbose=False):
 
 def _vprint(text, verbose):
 	if (verbose):
-		print text
+		print(text)
 
 if (__name__ == '__main__'):
 	if (len(sys.argv) > 1):
