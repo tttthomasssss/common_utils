@@ -187,7 +187,8 @@ def fetch_vectorized_datasets_for_keys(keys, **kwargs):
 	return data
 
 
-def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_key, use_tfidf=True, return_raw=False, extraction_style='all', binarize=False):
+def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_key, use_tfidf=True, return_raw=False,
+														extraction_style='all', binarize=False, tf_normalisation=True):
 	vectorized_labelled_train = None
 	raw_train_data = None
 	labels_train = None
@@ -203,6 +204,10 @@ def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_k
 	if (binarize):
 		train_data_name += '_binary'
 		test_data_name += '_binary'
+
+	if (tf_normalisation):
+		train_data_name += '_tf_norm'
+		test_data_name += '_tf_norm'
 
 	raw_train_data_name = '%s_raw_labelled_train' % (category_key,)
 	raw_test_data_name = '%s_raw_labelled_test' % (category_key,)
@@ -247,6 +252,10 @@ def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_k
 			curr_count_train_data_name += '_binary'
 			curr_count_test_data_name += '_binary'
 
+		if (tf_normalisation):
+			curr_count_train_data_name += '_tf_norm'
+			curr_count_test_data_name += '_tf_norm'
+
 		curr_test_labels_name = '%s_labels_test' % ('_'.join([prim_cat, sec_cat]),)
 		curr_train_labels_name = '%s_labels_train' % ('_'.join([prim_cat, sec_cat]),)
 		curr_count_vectorizer_name = 'count_vectorizer_%s' % ('_'.join([prim_cat, sec_cat]),)
@@ -261,8 +270,14 @@ def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_k
 
 		tfidf_vectors_train = tfidf_vectorizer.fit_transform(train_bunch.data)
 		tfidf_vectors_test = tfidf_vectorizer.transform(test_bunch.data)
-		count_vectors_train = transformer.fit_transform(count_vectorizer.fit_transform(train_bunch.data))
-		count_vectors_test = transformer.fit_transform(count_vectorizer.transform(test_bunch.data))
+
+		if (tf_normalisation):
+			count_vectors_train = transformer.fit_transform(count_vectorizer.fit_transform(train_bunch.data))
+			count_vectors_test = transformer.fit_transform(count_vectorizer.transform(test_bunch.data))
+		else:
+			count_vectors_train = count_vectorizer.fit_transform(train_bunch.data)
+			count_vectors_test = count_vectorizer.transform(test_bunch.data)
+
 		raw_train_data = train_bunch.data
 		raw_test_data = test_bunch.data
 
@@ -298,7 +313,7 @@ def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_k
 	return (vectorized_labelled_train, labels_train, vectorized_labelled_test, labels_test)
 
 
-def fetch_20newsgroups_for_keys(dataset_path, category_list, use_tfidf=True, extraction_style='all'):
+def fetch_20newsgroups_for_keys(dataset_path, category_list, use_tfidf=True, extraction_style='all', tf_normalisation=True):
 	tuple_list = list()
 	for cat in category_list:
 		tuple_list.append(fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, cat, use_tfidf))
@@ -310,7 +325,7 @@ def fetch_20newsgroups_dataset_ternarised_and_vectorized(dataset_path, categorie
 	pass
 
 
-def fetch_20newsgroups_dataset_vectorized(dataset_path, use_tfidf=True, extraction_style='all', binarize=False):
+def fetch_20newsgroups_dataset_vectorized(dataset_path, use_tfidf=True, extraction_style='all', binarize=False, tf_normalisation=True):
 	vectorized_labelled_train = None
 	labels_train = None
 	vectorized_labelled_test = None
@@ -320,6 +335,10 @@ def fetch_20newsgroups_dataset_vectorized(dataset_path, use_tfidf=True, extracti
 	tfidf_vectors_test_name = 'tfidf_vectors_labelled_test' if not binarize else 'tfidf_vectors_labelled_test_binary'
 	count_vectors_train_name = 'count_vectors_labelled_train' if not binarize else 'count_vectors_labelled_train_binary'
 	count_vectors_test_name = 'count_vectors_labelled_test' if not binarize else 'count_vectors_labelled_test_binary'
+
+	if (tf_normalisation):
+		count_vectors_train_name += '_tf_norm'
+		count_vectors_test_name += '_tf_norm'
 
 	if (os.path.exists(os.path.join(dataset_path, tfidf_vectors_train_name if use_tfidf else count_vectors_test_name))):
 		vectorized_labelled_train = joblib.load(os.path.join(dataset_path, tfidf_vectors_train_name if use_tfidf else count_vectors_train_name))
@@ -337,8 +356,13 @@ def fetch_20newsgroups_dataset_vectorized(dataset_path, use_tfidf=True, extracti
 
 			tfidf_vectors_train = tfidf_vectorizer.fit_transform(train_bunch.data)
 			tfidf_vectors_test = tfidf_vectorizer.transform(test_bunch.data)
-			count_vectors_train = transformer.fit_transform(count_vectorizer.fit_transform(train_bunch.data))
-			count_vectors_test = transformer.fit_transform(count_vectorizer.transform(test_bunch.data))
+
+			if (tf_normalisation):
+				count_vectors_train = transformer.fit_transform(count_vectorizer.fit_transform(train_bunch.data))
+				count_vectors_test = transformer.fit_transform(count_vectorizer.transform(test_bunch.data))
+			else:
+				count_vectors_train = count_vectorizer.fit_transform(train_bunch.data)
+				count_vectors_test = count_vectorizer.transform(test_bunch.data)
 
 			labels_train = np.array(train_bunch.target)
 			labels_test = np.array(test_bunch.target)
@@ -359,7 +383,7 @@ def fetch_20newsgroups_dataset_vectorized(dataset_path, use_tfidf=True, extracti
 	return (vectorized_labelled_train, labels_train, vectorized_labelled_test, labels_test)
 
 
-def fetch_webkb_dataset_vectorized(dataset_path, use_tfidf=True, extraction_style='all', binarize=False):
+def fetch_webkb_dataset_vectorized(dataset_path, use_tfidf=True, extraction_style='all', binarize=False, tf_normalisation=True):
 	vectorized_train = None
 	train_labels = None
 
@@ -383,7 +407,7 @@ def fetch_webkb_dataset_vectorized(dataset_path, use_tfidf=True, extraction_styl
 	return (vectorized_train, train_labels)
 
 
-def fetch_toy_example_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, extraction_style='all'):
+def fetch_toy_example_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, extraction_style='all', tf_normalisation=True):
 	vectorized_labelled_train = None
 	vectorized_labelled_test = None
 	vectorized_unlabelled = None
@@ -434,7 +458,8 @@ def fetch_toy_example_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_l
 	return (vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled) if not wrap_in_list else [(vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled)]
 
 
-def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, count_dtype=np.int64, tfidf_dtype=np.float64, return_raw=False, extraction_style='all', binarize=False):
+def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, count_dtype=np.int64, tfidf_dtype=np.float64,
+										   return_raw=False, extraction_style='all', binarize=False, tf_normalisation=True):
 	vectorized_labelled_train = None
 	vectorized_labelled_test = None
 	vectorized_unlabelled = None
@@ -459,6 +484,11 @@ def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in
 		count_labelled_name_train += '_binary'
 		count_labelled_name_test += '_binary'
 		count_unlabelled_name += '_binary'
+
+	if (tf_normalisation):
+		count_labelled_name_train += '_tf_norm'
+		count_labelled_name_test += '_tf_norm'
+		count_unlabelled_name += '_tf_norm'
 
 	if (os.path.exists(os.path.join(dataset_path,tfidf_labelled_name_train if use_tfidf else count_labelled_name_train)) and os.path.exists(os.path.join(dataset_path, 'train_docs'))):
 		vectorized_labelled_train = joblib.load(os.path.join(dataset_path, tfidf_labelled_name_train if use_tfidf else count_labelled_name_train))
@@ -507,13 +537,17 @@ def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in
 				count_vectorizer.fit(train_docs)
 
 			tfidf_vectors_labelled_train = tfidf_vectorizer.transform(train_docs)
-			count_vectors_labelled_train = transformer.fit_transform(count_vectorizer.transform(train_docs))
-
 			tfidf_vectors_labelled_test = tfidf_vectorizer.transform(test_docs)
-			count_vectors_labelled_test = transformer.fit_transform(count_vectorizer.transform(test_docs))
-
 			tfidf_vectors_unlabelled = tfidf_vectorizer.transform(unlabelled_docs)
-			count_vectors_unlabelled = transformer.fit_transform(count_vectorizer.transform(unlabelled_docs))
+
+			if (tf_normalisation):
+				count_vectors_labelled_test = transformer.fit_transform(count_vectorizer.transform(test_docs))
+				count_vectors_labelled_train = transformer.fit_transform(count_vectorizer.transform(train_docs))
+				count_vectors_unlabelled = transformer.fit_transform(count_vectorizer.transform(unlabelled_docs))
+			else:
+				count_vectors_labelled_test = count_vectorizer.transform(test_docs)
+				count_vectors_labelled_train = count_vectorizer.transform(train_docs)
+				count_vectors_unlabelled = count_vectorizer.transform(unlabelled_docs)
 
 			train_labels = np.array(train_targets)
 			test_labels = np.array(test_targets)
@@ -545,7 +579,8 @@ def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in
 	return (vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled) if not wrap_in_list else [(vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled)]
 
 
-def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, return_raw=False, extraction_style='all', binarize=False):
+def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, return_raw=False,
+												 extraction_style='all', binarize=False, tf_normalisation=True):
 	vectorized_labelled = None
 	labels = None
 
@@ -554,6 +589,9 @@ def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=True, w
 
 	tfidf_vectors_name = 'tfidf_vectors' if not binarize else 'tfidf_vectors_binary'
 	count_vectors_name = 'count_vectors' if not binarize else 'count_vectors_binary'
+
+	if (tf_normalisation):
+		count_vectors_name += '_tf_norm'
 
 	# Check if cache exists
 	tail, _ = os.path.split(dataset_path)
@@ -580,7 +618,12 @@ def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=True, w
 			transformer = TfidfTransformer(use_idf=False)
 
 			tfidf_labelled = tfidf_vectorizer.fit_transform(docs)
-			count_labelled = transformer.fit_transform(count_vectorizer.fit_transform(docs))
+
+			if (tf_normalisation):
+				count_labelled = transformer.fit_transform(count_vectorizer.fit_transform(docs))
+			else:
+				count_labelled = count_vectorizer.fit_transform(docs)
+
 			labels = np.array(targets)
 			raw_data = docs
 
@@ -601,7 +644,8 @@ def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=True, w
 	return (vectorized_labelled, labels) if not wrap_in_list else [(vectorized_labelled, labels)]
 
 
-def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, return_raw=False, top_n_classes=5, extraction_style='all', binarize=False):
+def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, return_raw=False, top_n_classes=5,
+									 extraction_style='all', binarize=False, tf_normalisation=True):
 	vectorized_labelled_train  = None
 	train_labels = None
 	vectorized_labelled_test = None
@@ -617,6 +661,10 @@ def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=
 	tfidf_vectors_test_name = 'tfidf_vectors_labelled_test' if not binarize else 'tfidf_vectors_labelled_test_binary'
 	count_vectors_train_name = 'count_vectors_labelled_train' if not binarize else 'count_vectors_labelled_train_binary'
 	count_vectors_test_name = 'count_vectors_labelled_test' if not binarize else 'count_vectors_labelled_test_binary'
+
+	if (tf_normalisation):
+		count_vectors_train_name += '_tf_norm'
+		count_vectors_test_name += '_tf_norm'
 
 	# Check if cache exists
 	cache_path = os.path.join(dataset_path, '%d_%s' % (top_n_classes, tfidf_vectors_train_name if use_tfidf else count_vectors_train_name))
@@ -690,16 +738,20 @@ def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=
 
 			# Transform
 			tfidf_vectors_labelled_train = tfidf_vectorizer.fit_transform(train_docs)
-			count_vectors_labelled_train = transformer.fit_transform(count_vectorizer.fit_transform(train_docs))
-
 			tfidf_vectors_labelled_test = tfidf_vectorizer.transform(test_docs)
-			count_vectors_labelled_test = transformer.fit_transform(count_vectorizer.transform(test_docs))
+			tfidf_vectors_unlabelled = tfidf_vectorizer.transform(unlabelled_docs)
+
+			if (tf_normalisation):
+				count_vectors_labelled_train = transformer.fit_transform(count_vectorizer.fit_transform(train_docs))
+				count_vectors_labelled_test = transformer.fit_transform(count_vectorizer.transform(test_docs))
+				count_vectors_unlabelled = transformer.fit_transform(count_vectorizer.transform(unlabelled_docs))
+			else:
+				count_vectors_labelled_train = count_vectorizer.fit_transform(train_docs)
+				count_vectors_labelled_test = count_vectorizer.transform(test_docs)
+				count_vectors_unlabelled = count_vectorizer.transform(unlabelled_docs)
 
 			train_labels = np.array(train_targets)
 			test_labels = np.array(test_targets)
-
-			tfidf_vectors_unlabelled = tfidf_vectorizer.transform(unlabelled_docs)
-			count_vectors_unlabelled = transformer.fit_transform(count_vectorizer.transform(unlabelled_docs))
 
 			# Cache
 			joblib.dump(tfidf_vectors_labelled_train, os.path.join(dataset_path, tfidf_vectors_train_name))
@@ -728,7 +780,8 @@ def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=
 	return (vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels) if not wrap_in_list else [(vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels)]
 
 
-def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, return_raw=False, extraction_style='all', binarize=False):
+def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, return_raw=False, extraction_style='all',
+								  binarize=False, tf_normalisation=True):
 	vectorized_labelled = None
 	labels = None
 	raw_labelled = None
@@ -738,6 +791,9 @@ def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=Fal
 
 	tfidf_vectors_name = 'tfidf_vectors' if not binarize else 'tfidf_vectors_binary'
 	count_vectors_name = 'count_vectors' if not binarize else 'count_vectors_binary'
+
+	if (tf_normalisation):
+		count_vectors_name += '_tf_norm'
 
 	# Check if cache exists
 	cache_path = os.path.join(dataset_path, tfidf_vectors_name if use_tfidf else count_vectors_name)
@@ -785,7 +841,12 @@ def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=Fal
 			transformer = TfidfTransformer(use_idf=False)
 
 			tfidf_labelled = tfidf_vectorizer.fit_transform(docs)
-			count_labelled = transformer.fit_transform(count_vectorizer.fit_transform(docs))
+
+			if (tf_normalisation):
+				count_labelled = transformer.fit_transform(count_vectorizer.fit_transform(docs))
+			else:
+				count_labelled = count_vectorizer.fit_transform(docs)
+
 			labels = np.array(targets)
 
 			# Cache the stuff
@@ -808,7 +869,8 @@ def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=Fal
 	return (vectorized_labelled, labels) if not wrap_in_list else [(vectorized_labelled, labels)]
 
 
-def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True, extraction_style='all', binarize=False):
+def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True, extraction_style='all', binarize=False,
+									  tf_normalisation=True):
 	vectorized_labelled_train = None
 	train_labels = None
 	vectorized_labelled_test = None
@@ -832,6 +894,11 @@ def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True
 		count_labelled_train_name += '_binary'
 		count_labelled_test_name += '_binary'
 		count_unlabelled_test_name += '_binary'
+
+	if (tf_normalisation):
+		count_labelled_train_name += '_tf_norm'
+		count_labelled_test_name += '_tf_norm'
+		count_unlabelled_test_name += '_tf_norm'
 
 	# Check if cached stuff exists
 	if (os.path.exists(os.path.join(dataset_path, dataset_name, tfidf_labelled_train_name if use_tfidf else count_labelled_train_name))):
@@ -866,13 +933,18 @@ def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True
 				count_vectorizer.fit(raw_labelled_train)
 
 			tfidf_vectors_labelled_train = tfidf_vectorizer.transform(raw_labelled_train)
-			count_vectors_labelled_train = transformer.fit_transform(count_vectorizer.transform(raw_labelled_train))
-
 			tfidf_vectors_labelled_test = tfidf_vectorizer.transform(raw_labelled_test)
-			count_vectors_labelled_test = transformer.fit_transform(count_vectorizer.transform(raw_labelled_test))
-
 			tfidf_vectors_unlabelled = tfidf_vectorizer.transform(raw_unlabelled)
-			count_vectors_unlabelled = transformer.fit_transform(count_vectorizer.transform(raw_unlabelled))
+
+			if (tf_normalisation):
+				count_vectors_labelled_train = transformer.fit_transform(count_vectorizer.transform(raw_labelled_train))
+				count_vectors_labelled_test = transformer.fit_transform(count_vectorizer.transform(raw_labelled_test))
+				count_vectors_unlabelled = transformer.fit_transform(count_vectorizer.transform(raw_unlabelled))
+			else:
+				count_vectors_labelled_train = count_vectorizer.transform(raw_labelled_train)
+				count_vectors_labelled_test = count_vectorizer.transform(raw_labelled_test)
+				count_vectors_unlabelled = count_vectorizer.transform(raw_unlabelled)
+
 
 			train_labels = np.array(raw_train_labels)
 			test_labels = np.array(raw_test_labels)
@@ -898,7 +970,8 @@ def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True
 			label_map, labelled_features, vocab)
 
 
-def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True, extraction_style='all', binarize=False):
+def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True, extraction_style='all', binarize=False,
+											  tf_normalisation=True):
 	vectorized_labelled_train = None
 	train_labels = None
 	vectorized_labelled_test = None
@@ -922,6 +995,11 @@ def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tf
 		count_labelled_train_name += '_binary'
 		count_labelled_test_name += '_binary'
 		count_unlabelled_test_name += '_binary'
+
+	if (tf_normalisation):
+		count_labelled_train_name += '_tf_norm'
+		count_labelled_test_name += '_tf_norm'
+		count_unlabelled_test_name += '_tf_norm'
 
 	# Check if cached stuff exists
 	if (os.path.exists(os.path.join(dataset_path, dataset_name, tfidf_labelled_train_name if use_tfidf else count_labelled_train_name))):
@@ -963,13 +1041,17 @@ def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tf
 				count_vectorizer.fit(labelled_train)
 
 			tfidf_vectors_labelled_train = tfidf_vectorizer.transform(train_data)
-			count_vectors_labelled_train = transformer.fit_transform(count_vectorizer.transform(train_data))
-
 			tfidf_vectors_labelled_test = tfidf_vectorizer.transform(test_data)
-			count_vectors_labelled_test = transformer.fit_transform(count_vectorizer.transform(test_data))
-
 			tfidf_vectors_unlabelled = tfidf_vectorizer.transform(unlabelled_data)
-			count_vectors_unlabelled = transformer.fit_transform(count_vectorizer.transform(unlabelled_data))
+
+			if (tf_normalisation):
+				count_vectors_labelled_train = transformer.fit_transform(count_vectorizer.transform(train_data))
+				count_vectors_labelled_test = transformer.fit_transform(count_vectorizer.transform(test_data))
+				count_vectors_unlabelled = transformer.fit_transform(count_vectorizer.transform(unlabelled_data))
+			else:
+				count_vectors_labelled_train = count_vectorizer.transform(train_data)
+				count_vectors_labelled_test = count_vectorizer.transform(test_data)
+				count_vectors_unlabelled = count_vectorizer.transform(unlabelled_data)
 
 			labelled_features = {}
 			labelled_features_idx = {}
@@ -1013,7 +1095,7 @@ def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tf
 
 
 def fetch_twitter_fyp_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True, wrap_in_list=False,
-										 return_raw=False, extraction_style='all', binarize=False):
+										 return_raw=False, extraction_style='all', binarize=False, tf_normalisation=True):
 	vectorized_labelled = None
 	labels = None
 	vectorized_unlabelled = None
@@ -1034,6 +1116,10 @@ def fetch_twitter_fyp_dataset_vectorized(dataset_path, dataset_name, use_tfidf=T
 		tfidf_unlabelled_name += '_binary'
 		count_labelled_name += '_binary'
 		count_unlabelled_name += '_binary'
+
+	if (tf_normalisation):
+		count_labelled_name += '_tf_norm'
+		count_unlabelled_name += '_tf_norm'
 
 	# Check if cached stuff exists
 	if (os.path.exists(os.path.join(dataset_path, dataset_name, tfidf_labelled_name if use_tfidf else
@@ -1068,10 +1154,14 @@ def fetch_twitter_fyp_dataset_vectorized(dataset_path, dataset_name, use_tfidf=T
 					count_vectorizer.fit(labelled_data)
 
 				tfidf_vectors_labelled = tfidf_vectorizer.fit_transform(labelled_data)
-				count_vectors_labelled = transformer.fit_transform(count_vectorizer.transform(labelled_data))
-
 				tfidf_vectors_unlabelled = tfidf_vectorizer.transform(unlabelled_data)
-				count_vectors_unlabelled = transformer.fit_transform(count_vectorizer.transform(unlabelled_data))
+
+				if (tf_normalisation):
+					count_vectors_labelled = transformer.fit_transform(count_vectorizer.transform(labelled_data))
+					count_vectors_unlabelled = transformer.fit_transform(count_vectorizer.transform(unlabelled_data))
+				else:
+					count_vectors_labelled = count_vectorizer.transform(labelled_data)
+					count_vectors_unlabelled = count_vectorizer.transform(unlabelled_data)
 
 				# Cache vectorized
 				joblib.dump(tfidf_vectors_labelled, os.path.join(dataset_path, dataset_name, tfidf_labelled_name))
