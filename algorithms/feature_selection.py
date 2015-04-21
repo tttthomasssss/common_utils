@@ -59,6 +59,47 @@ def information_gain(X, y):
 	return IG, np.ones(IG.shape)
 
 
+def weighted_log_likelihood_ratio(X, y):
+	'''
+	Weighted Log-Likelihood Ratio (WLLR) between a feature t of X and a class label c of y
+	Calculated as defined by Li et al. (2009): A Framework of Feature Selection Methods for Text Categorization, 3.6 Weighted Log-Likelihood Ratio (WLLR)
+		WLLR = A / N * log ((A * (N_all - N)) / B * N)
+
+		where
+			A = the number of documents containing term t and belonging to class c
+			B = the number of documents containing term t and NOT belonging to class c
+			N_all = the number of documents in the training set
+			N = the number of documents belonging to class c
+	:param X:
+	:param y:
+	:return:
+	'''
+	X_bin = binarize(X)
+	neg_mask = np.ones(X.shape[0], dtype=bool)
+
+	labels = np.unique(y)
+
+	A = np.zeros((labels.shape[0], X.shape[1]))
+	B = np.zeros((labels.shape[0], X.shape[1]))
+	N_c = np.zeros((labels.shape[0], 1))
+	n = X.shape[0]
+
+	for y_c in labels:
+		y_c_mask = y == y_c
+		neg_mask[y_c_mask] = False
+
+		A[y_c] = X_bin[y_c_mask].sum(axis=0)
+		B[y_c] = X_bin[neg_mask].sum(axis=0)
+		N_c[y_c] = n - y[y == y_c].shape[0]
+
+		neg_mask[:] = True
+
+
+	F = ((A / N_c) * ((np.log(A) + np.log(N_c)) - (np.log(B) + np.log(N_c)))).sum(axis=0)
+
+	return F, np.ones(F.shape)
+
+
 def mutual_information(X, y):
 	'''
 	Mutual Information between a feature t of X and a class label c of y
@@ -80,9 +121,50 @@ def mutual_information(X, y):
 
 	labels = np.unique(y)
 
-	A = np.zeros(labels.shape[0], X.shape[1])
-	B = np.zeros(labels.shape[0], X.shape[1])
-	C = np.zeros(labels.shape[0], X.shape[1])
+	A = np.zeros((labels.shape[0], X.shape[1]))
+	B = np.zeros((labels.shape[0], X.shape[1]))
+	C = np.zeros((labels.shape[0], X.shape[1]))
+	n = X.shape[0]
+
+	for y_c in labels:
+		y_c_mask = y == y_c
+		neg_mask[y_c_mask] = False
+
+		A[y_c] = X_bin[y_c_mask].sum(axis=0)
+		B[y_c] = X_bin[neg_mask].sum(axis=0)
+		C = X_bin[y_c_mask].shape[0] - A
+
+		neg_mask[:] = True
+
+	F = ((np.log(A) + np.log(n)) - (np.log(A + C) + np.log(A + B))).sum(axis=0)
+
+	return F, np.ones(F.shape)
+
+
+def mutual_information_max(X, y):
+	'''
+	Mutual Information between a feature t of X and a class label c of y
+	Calculated as defined by Li et al. (2009): A Framework of Feature Selection Methods for Text Categorization, 3.2 Mutual Information (MI)
+		MI = log (A * n) / ((A + C) * (A + B))
+
+		where
+			A = the number of documents containing term t and belonging to class c
+			B = the number of documents containing term t and NOT belonging to class c
+			C = the number of documents NOT containing term t and belonging to class c
+			n = the number of documents in the training set
+	:param X:
+	:param y:
+	:return:
+	'''
+
+	X_bin = binarize(X)
+	neg_mask = np.ones(X.shape[0], dtype=bool)
+
+	labels = np.unique(y)
+
+	A = np.zeros((labels.shape[0], X.shape[1]))
+	B = np.zeros((labels.shape[0], X.shape[1]))
+	C = np.zeros((labels.shape[0], X.shape[1]))
 	n = X.shape[0]
 
 	for y_c in labels:
@@ -96,6 +178,8 @@ def mutual_information(X, y):
 		neg_mask[:] = True
 
 	F = (np.log(A) + np.log(n)) - (np.log(A + C) + np.log(A + B))
+
+	F = np.amax(F, axis=0)
 
 	return F, np.ones(F.shape)
 
@@ -116,7 +200,7 @@ def document_frequency(X, y):
 	return F, np.ones(F.shape)
 
 
-def f_classif(X, y):
+def skf_classif(X, y):
 	return f_classif(X, y)
 
 
