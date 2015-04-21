@@ -1,4 +1,4 @@
-
+from __future__ import division
 __author__ = 'thk22'
 import itertools
 import math
@@ -79,7 +79,12 @@ class NaiveBayesSmoothing(object): # TODO: Convert to Smoothing Mixin
 
 	@staticmethod
 	def calc_lidstone_damping_factor_tokens(vocab_size, n_tokens, alpha=1.):
-		damping_magnitude_tokens = math.floor(math.log10(vocab_size * alpha)) / math.floor(math.log10(n_tokens))
+		denom = np.nan_to_num(math.floor(np.log10(n_tokens)))
+
+		# Avoid division by 0
+		denom = denom if denom > 0. else 1.
+
+		damping_magnitude_tokens = math.floor(np.log10(vocab_size * alpha)) / denom
 		damping_factor_tokens = 10 ** damping_magnitude_tokens
 
 		return damping_factor_tokens
@@ -282,7 +287,7 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 		n_w_pos_sum, n_w_neg_sum = self.feature_counts_[0].sum(), self.feature_counts_[1].sum()
 
 		# Optimisation
-		for i in range(self.feature_counts_.shape[1]):
+		for i in xrange(self.feature_counts_.shape[1]):
 			if (self.feature_counts_[0, i] > 0 and self.feature_counts_[1, i] > 0):
 				n_w_pos = self.feature_counts_[0, i]
 				n_w_neg = self.feature_counts_[1, i]
@@ -324,7 +329,7 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 	def _evidence_per_instance(self, ranked_label_idx, Z):
 		E_log = np.zeros((ranked_label_idx.shape[0], 2))
 
-		for row_idx, (rank_idx, z) in enumerate(zip(ranked_label_idx, Z)):
+		for row_idx, (rank_idx, z) in enumerate(itertools.izip(ranked_label_idx, Z)):
 			E_log[row_idx, 0] = np.maximum(self.log_probs_[rank_idx[0], z.nonzero()[1]] - self.log_probs_[rank_idx[1], z.nonzero()[1]], 0.).sum()
 			E_log[row_idx, 1] = np.maximum(self.log_probs_[rank_idx[1], z.nonzero()[1]] - self.log_probs_[rank_idx[0], z.nonzero()[1]], 0.).sum()
 
@@ -347,7 +352,7 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 		E = E_log.sum(axis=1)
 		'''
 		import time
-		print(time.time())
+		print time.time()
 		MLC = np.zeros((ranked_label_idx.shape[0], Z.shape[1]))
 		SMLC = np.zeros((ranked_label_idx.shape[0], Z.shape[1]))
 
@@ -357,7 +362,7 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 		E = np.maximum(MLC - SMLC, 0.).sum(axis=1)
 
 		self.log_probs_[rank]
-		print(time.time())
+		print time.time()
 
 		return E
 
