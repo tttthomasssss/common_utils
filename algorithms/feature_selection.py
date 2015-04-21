@@ -79,9 +79,9 @@ def weighted_log_likelihood_ratio(X, y):
 
 	labels = np.unique(y)
 
-	A = np.zeros((labels.shape[0], X.shape[1]))
-	B = np.zeros((labels.shape[0], X.shape[1]))
-	N_c = np.zeros((labels.shape[0], 1))
+	A = np.zeros((np.max(labels) + 1, X.shape[1]))
+	B = np.zeros((np.max(labels) + 1, X.shape[1]))
+	N_c = np.zeros((np.max(labels) + 1, 1))
 	n = X.shape[0]
 
 	for y_c in labels:
@@ -121,9 +121,9 @@ def mutual_information(X, y):
 
 	labels = np.unique(y)
 
-	A = np.zeros((labels.shape[0], X.shape[1]))
-	B = np.zeros((labels.shape[0], X.shape[1]))
-	C = np.zeros((labels.shape[0], X.shape[1]))
+	A = np.zeros((np.max(labels) + 1, X.shape[1]))
+	B = np.zeros((np.max(labels) + 1, X.shape[1]))
+	C = np.zeros((np.max(labels) + 1, X.shape[1]))
 	n = X.shape[0]
 
 	for y_c in labels:
@@ -162,9 +162,9 @@ def mutual_information_max(X, y):
 
 	labels = np.unique(y)
 
-	A = np.zeros((labels.shape[0], X.shape[1]))
-	B = np.zeros((labels.shape[0], X.shape[1]))
-	C = np.zeros((labels.shape[0], X.shape[1]))
+	A = np.zeros((np.max(labels) + 1, X.shape[1]))
+	B = np.zeros((np.max(labels) + 1, X.shape[1]))
+	C = np.zeros((np.max(labels) + 1, X.shape[1]))
 	n = X.shape[0]
 
 	for y_c in labels:
