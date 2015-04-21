@@ -2,5 +2,7 @@ algorithms
 classifiers
 common
 corpus_hacks
+method51
+method52
 preprocessing
 utils
