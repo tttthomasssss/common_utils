@@ -79,12 +79,12 @@ class NaiveBayesSmoothing(object): # TODO: Convert to Smoothing Mixin
 
 	@staticmethod
 	def calc_lidstone_damping_factor_tokens(vocab_size, n_tokens, alpha=1.):
-		denom = math.floor(math.log10(n_tokens))
+		denom = np.nan_to_num(math.floor(np.log10(n_tokens)))
 
 		# Avoid division by 0
 		denom = denom if denom > 0. else 1.
 
-		damping_magnitude_tokens = math.floor(math.log10(vocab_size * alpha)) / denom
+		damping_magnitude_tokens = math.floor(np.log10(vocab_size * alpha)) / denom
 		damping_factor_tokens = 10 ** damping_magnitude_tokens
 
 		return damping_factor_tokens
