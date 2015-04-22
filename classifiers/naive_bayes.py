@@ -6,6 +6,8 @@ import math
 from scipy import sparse
 from scipy.optimize import newton
 from sklearn.base import BaseEstimator
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.utils import check_array
 from sklearn.utils.extmath import logsumexp
 from sklearn.utils.extmath import safe_sparse_dot
 import numpy as np
@@ -187,6 +189,50 @@ class NaiveBayesSmoothingMixin(object):
 		damping_factor_vocab = 10 ** damping_magnitude_vocab
 
 		return damping_factor_vocab
+
+
+class MultinomialCNB(MultinomialNB):
+
+	def _update_feature_log_prob(self):
+		"""Apply smoothing to raw counts and recompute log probabilities see Rennie (2003) for details on how
+			to compute the complement counts"""
+		super(MultinomialCNB, self)._update_feature_log_prob()
+
+		self.complement_feature_log_prob_ = np.zeros(self.feature_log_prob_.shape)
+		mask = np.ones(len(self.classes_), dtype=np.bool)
+
+		for c in self.classes_:
+			mask[c] = False
+
+			smoothed_complement_fc = (self.feature_count_[mask] + self.alpha).sum(axis=0)
+			smoothed_complement_cc = smoothed_complement_fc.sum()
+
+			self.complement_feature_log_prob_[c] = (np.log(smoothed_complement_fc)
+													- np.log(smoothed_complement_cc.reshape(-1, 1)))
+
+			mask[:] = True
+
+	def _joint_log_likelihood(self, X):
+		"""Calculate the posterior log probability of the samples X"""
+		X = check_array(X, accept_sparse='csr')
+		return (self.class_log_prior_ -
+				safe_sparse_dot(X, self.complement_feature_log_prob_.T))
+
+
+class MultinomialWCNB(MultinomialCNB):
+	def _update_feature_log_prob(self):
+		"""Apply smoothing to raw counts and recompute log probabilities see Rennie (2003) for details on how
+			to compute the complement counts"""
+		super(MultinomialWCNB, self)._update_feature_log_prob()
+		self.complement_feature_log_prob_ /= np.abs(self.complement_feature_log_prob_).sum(axis=1).reshape(-1, 1)
+
+
+class MultinomialWNB(MultinomialNB):
+	def _update_feature_log_prob(self):
+		"""Apply smoothing to raw counts and recompute log probabilities see Rennie (2003) for details on how
+			to compute the complement counts"""
+		super(MultinomialWNB, self)._update_feature_log_prob()
+		self.feature_log_prob_ /= np.abs(self.feature_log_prob_).sum(axis=1).reshape(-1, 1)
 
 
 class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
