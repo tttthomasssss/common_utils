@@ -26,7 +26,7 @@ def load_raw_model_data(model_name):
 	nb_model_path = os.path.join(base_path, model_name, 'nbmodel.json')
 
 	# JSON data
-	print '\tParsing the JSON model files...'
+	print('\tParsing the JSON model files...')
 	sample = json.load(open(sample_path, 'rb'))
 	datasource = json.load(open(datasource_path, 'rb'))
 	labelling = json.load(open(labelling_path, 'rb'))
@@ -40,12 +40,12 @@ def load_raw_model_data(model_name):
 
 	not_in_ids = []
 
-	label_map = dict((value, key) for key, value in dict(enumerate(labelling['labels'])).iteritems())
+	label_map = dict((value, key) for key, value in dict(enumerate(labelling['labels'])).items())
 	training_docs = []
 	labels = []
 
 	# Training Data
-	print '\tGathering the labelled training data...'
+	print('\tGathering the labelled training data...')
 	for t in training:
 		training_docs.append(t['text'])
 		not_in_ids.append(t['id'])
@@ -60,16 +60,16 @@ def load_raw_model_data(model_name):
 	# DB data
 
 	# Gold Standard Data
-	print '\tGathering the Gold Standard data...'
+	print('\tGathering the Gold Standard data...')
 	gs_docs = []
 	gs_labels = []
 
-	for k, v in labelling['sample_labels'].iteritems():
+	for k, v in labelling['sample_labels'].items():
 		item_label_distro = collections.defaultdict(int)
-		for vv in v.itervalues():
+		for vv in v.values():
 			item_label_distro[vv] += 1
 
-		max_label = max(item_label_distro.iteritems(), key=operator.itemgetter(1))[0]
+		max_label = max(iter(item_label_distro.items()), key=operator.itemgetter(1))[0]
 
 		for s in sample:
 			if (s['id'] == k):
@@ -79,7 +79,7 @@ def load_raw_model_data(model_name):
 				break
 
 	# Unlabelled Data
-	print '\tFetching the Unlabelled data...'
+	print('\tFetching the Unlabelled data...')
 	unlabelled_docs = []
 	not_in_ids_str = ','.join(not_in_ids)
 
@@ -98,7 +98,7 @@ def load_raw_model_data(model_name):
 	if (not os.path.exists(out_path)):
 		os.makedirs(out_path)
 
-	print '\tStarting the dump...'
+	print('\tStarting the dump...')
 	joblib.dump(training_docs, os.path.join(out_path, 'raw_training_docs'))
 	joblib.dump(labels, os.path.join(out_path, 'raw_training_labels'))
 	joblib.dump(label_map, os.path.join(out_path, 'label_map'))
@@ -107,15 +107,15 @@ def load_raw_model_data(model_name):
 	joblib.dump(gs_docs, os.path.join(out_path, 'raw_gold_standard_docs'))
 	joblib.dump(gs_labels, os.path.join(out_path, 'raw_gold_standard_labels'))
 	joblib.dump(unlabelled_docs, os.path.join(out_path, 'raw_unlabelled_docs'))
-	print 'Finished!'
+	print('Finished!')
 
 
 def convert_raw_model_data(model_name):
-	print '\tFetching model...'
+	print('\tFetching model...')
 	data = dataset_utils.fetch_ws_paper_dataset_vectorized(os.path.join(paths.get_dataset_path(), 'ws_paper'), dataset_name=model_name, extraction_style='all')
 
-	print '\tReturned %d items!' % (len(data),)
-	print 'Finished!'
+	print('\tReturned %d items!' % (len(data),))
+	print('Finished!')
 
 if (__name__ == '__main__'):
 	#models = ['clacton-master-filtered', 'floodingbtr', 'alessia-cameron2', 'cameronboocheer']
@@ -128,8 +128,8 @@ if (__name__ == '__main__'):
 
 
 	for m in models:
-		print 'Processing %s...' % (m,)
+		print('Processing %s...' % (m,))
 		load_raw_model_data(m)
 
-		print 'Converting %s...'  % (m,)
+		print('Converting %s...'  % (m,))
 		convert_raw_model_data(m)

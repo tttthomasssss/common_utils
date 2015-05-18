@@ -32,7 +32,7 @@ class EMWeightingSchemeMixin(object):
 	def _standard_all_fit(self, Z, y_prob, clf, weights):
 		#y_Z = np.repeat(np.array(range(y_prob.shape[1])).reshape(1, -1), y_prob.shape[0], axis=0).T
 		#clf.partial_fit(Z, y_Z, sample_weight=weights)
-		for c in xrange(y_prob.shape[1]):
+		for c in range(y_prob.shape[1]):
 			y_c = np.full((y_prob.shape[0], 1), c)
 			clf.partial_fit(Z, y_c, sample_weight=weights[:, c])
 
@@ -91,12 +91,12 @@ class ExpectationMaximization(BaseEstimator, EMWeightingSchemeMixin):
 		# Step 1: Model Initialisation
 		self.clf_.fit(X, y)
 
-		for _ in xrange(max_iter):
+		for _ in range(max_iter):
 			stage_chunk_size = int(Z.shape[0] / stages)
 			stage_chunk_offset = 0
 			to_label_idx = instance_selection.margin_of_confidence_ranking(self.clf_, Z, ordering='desc', with_evidence=True)
 
-			for __ in xrange(stages):
+			for __ in range(stages):
 				# TODO: Second loop, only select highly MSU ones first, then gradually adding in LSU ones
 
 				# Step 2: Generating probabilistic labels for the unlabelled data
@@ -128,7 +128,7 @@ class ExpectationMaximization(BaseEstimator, EMWeightingSchemeMixin):
 		# Step 1: Model Initialisation
 		self.clf_.fit(X, y)
 
-		for _ in xrange(max_iter):
+		for _ in range(max_iter):
 			# Step 2: Generating probabilistic labels for the unlabelled data
 			y_prob = self.clf_.predict_proba(Z)
 

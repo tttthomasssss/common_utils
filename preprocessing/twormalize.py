@@ -1,5 +1,5 @@
 __author__ = 'thomas'
-import twokenize
+from . import twokenize
 
 
 def normalise_urls(tokens): # Twitter URLs should all be of the form http://t.co/<BLAHBLAH>, so this should be safe

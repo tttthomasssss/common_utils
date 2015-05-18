@@ -1,4 +1,4 @@
-from __future__ import division
+
 import collections
 import json
 import operator
@@ -6,6 +6,7 @@ import os
 
 from common import paths
 import pymysql
+from functools import reduce
 
 PROJECT_PATH = os.path.dirname(os.path.dirname(__file__))
 
@@ -21,7 +22,7 @@ def _calculate_training_label_distribution(labels, training_data):
 
 		sumsi = sum(label_distro.values())
 
-		for l in label_distro.iterkeys():
+		for l in label_distro.keys():
 			label_distro[l] /= sumsi
 
 	return label_distro
@@ -31,16 +32,16 @@ def _calculate_gold_standard_label_distribution(labels, sample_labels):
 	label_distro = collections.defaultdict(float)
 
 	if (len(sample_labels) > 0):
-		for v in sample_labels.itervalues():
+		for v in sample_labels.values():
 			item_label_distro = collections.defaultdict(int)
-			for vv in v.itervalues():
+			for vv in v.values():
 				item_label_distro[vv] += 1
 
-			label_distro[max(item_label_distro.iteritems(), key=operator.itemgetter(1))[0]] += 1.
+			label_distro[max(iter(item_label_distro.items()), key=operator.itemgetter(1))[0]] += 1.
 
 		sumsi = sum(label_distro.values())
 
-		for l in label_distro.iterkeys():
+		for l in label_distro.keys():
 			label_distro[l] /= sumsi
 
 	return label_distro
@@ -51,7 +52,7 @@ def print_stats_for_models_at_path(p, min_unlabelled=0, min_labelled_training=0,
 
 	model_stats = {}
 
-	for idx, subdir in enumerate(filter(lambda xx: True if xx != p else False, [x[0] for x in os.walk(p)])):
+	for idx, subdir in enumerate([xx for xx in [x[0] for x in os.walk(p)] if True if xx != p else False]):
 		_, model_name = os.path.split(subdir)
 
 		model_stats[model_name] = {}
@@ -98,16 +99,16 @@ def print_stats_for_models_at_path(p, min_unlabelled=0, min_labelled_training=0,
 					model_stats[model_name]['gold_standard_label_distribution'] = gold_standard_label_distribution
 
 				#print model_stats[model_name]
-			except pymysql.err.ProgrammingError, e:
-				print e
-			except pymysql.err.InternalError, e:
-				print e
+			except pymysql.err.ProgrammingError as e:
+				print(e)
+			except pymysql.err.InternalError as e:
+				print(e)
 			finally:
 				cur.close()
 				if (conn.open):
 					conn.close()
 
-	print json.dumps(model_stats)
+	print(json.dumps(model_stats))
 
 if (__name__ == '__main__'):
 	print_stats_for_models_at_path(os.path.join(paths.get_dataset_path(), 'method51', 'models'), min_num_labels=4)

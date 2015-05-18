@@ -1,4 +1,4 @@
-from __future__ import division
+
 __author__ = 'thk22'
 
 from classifiers.naive_bayes import NaiveBayesSmoothing
