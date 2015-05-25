@@ -25,7 +25,7 @@ class EMWeightingSchemeMixin(object):
 
 	def _standard_max_fit(self, Z, y_prob, clf, weights):
 		y_Z = np.argmax(y_prob, axis=1)
-		clf.partial_fit(Z, y_Z, sample_weight=weights[y_Z])
+		clf.partial_fit(Z, y_Z, sample_weight=weights[np.arange(y_Z.shape[0]), y_Z])
 
 		return clf
 

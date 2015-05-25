@@ -187,8 +187,8 @@ def fetch_vectorized_datasets_for_keys(keys, **kwargs):
 	return data
 
 
-def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_key, use_tfidf=True, return_raw=False,
-														extraction_style='all', binarize=False, tf_normalisation=True,
+def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_key, use_tfidf=False, return_raw=False,
+														extraction_style='all', binarize=False, tf_normalisation=False,
 														ngram_range=(1, 1)):
 	vectorized_labelled_train = None
 	raw_train_data = None
@@ -209,6 +209,10 @@ def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_k
 	if (tf_normalisation):
 		train_data_name += '_tf_norm'
 		test_data_name += '_tf_norm'
+
+	if (not min(ngram_range) == max(ngram_range) == 1):
+		train_data_name = '_'.join([train_data_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
+		test_data_name = '_'.join([test_data_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 
 	raw_train_data_name = '%s_raw_labelled_train' % (category_key,)
 	raw_test_data_name = '%s_raw_labelled_test' % (category_key,)
@@ -320,7 +324,7 @@ def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_k
 	return (vectorized_labelled_train, labels_train, vectorized_labelled_test, labels_test)
 
 
-def fetch_20newsgroups_for_keys(dataset_path, category_list, use_tfidf=True, extraction_style='all', tf_normalisation=True, ngram_range=(1, 1)):
+def fetch_20newsgroups_for_keys(dataset_path, category_list, use_tfidf=False, extraction_style='all', tf_normalisation=False, ngram_range=(1, 1)):
 	tuple_list = list()
 	for cat in category_list:
 		tuple_list.append(fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, cat, use_tfidf))
@@ -328,12 +332,12 @@ def fetch_20newsgroups_for_keys(dataset_path, category_list, use_tfidf=True, ext
 	return tuple_list
 
 
-def fetch_20newsgroups_dataset_ternarised_and_vectorized(dataset_path, categories, use_tfidf=True, extraction_style='all', ngram_range=(1, 1)):
+def fetch_20newsgroups_dataset_ternarised_and_vectorized(dataset_path, categories, use_tfidf=False, extraction_style='all', ngram_range=(1, 1)):
 	pass
 
 
-def fetch_20newsgroups_dataset_vectorized(dataset_path, use_tfidf=True, extraction_style='all',
-										  binarize=False, tf_normalisation=True, ngram_range=(1, 1)):
+def fetch_20newsgroups_dataset_vectorized(dataset_path, use_tfidf=False, extraction_style='all',
+										  binarize=False, tf_normalisation=False, ngram_range=(1, 1)):
 	vectorized_labelled_train = None
 	labels_train = None
 	vectorized_labelled_test = None
@@ -397,8 +401,8 @@ def fetch_20newsgroups_dataset_vectorized(dataset_path, use_tfidf=True, extracti
 	return (vectorized_labelled_train, labels_train, vectorized_labelled_test, labels_test)
 
 
-def fetch_webkb_dataset_vectorized(dataset_path, use_tfidf=True, extraction_style='all',
-								   binarize=False, tf_normalisation=True, ngram_range=(1, 1)):
+def fetch_webkb_dataset_vectorized(dataset_path, use_tfidf=False, extraction_style='all',
+								   binarize=False, tf_normalisation=False, ngram_range=(1, 1)):
 	vectorized_train = None
 	train_labels = None
 
@@ -422,8 +426,8 @@ def fetch_webkb_dataset_vectorized(dataset_path, use_tfidf=True, extraction_styl
 	return (vectorized_train, train_labels)
 
 
-def fetch_toy_example_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False,
-										 extraction_style='all', tf_normalisation=True, ngram_range=(1, 1)):
+def fetch_toy_example_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list=False,
+										 extraction_style='all', tf_normalisation=False, ngram_range=(1, 1)):
 	vectorized_labelled_train = None
 	vectorized_labelled_test = None
 	vectorized_unlabelled = None
@@ -474,9 +478,9 @@ def fetch_toy_example_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_l
 	return (vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled) if not wrap_in_list else [(vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled)]
 
 
-def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, count_dtype=np.int64,
+def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list=False, count_dtype=np.int64,
 										   tfidf_dtype=np.float64, return_raw=False, extraction_style='all',
-										   binarize=False, tf_normalisation=True, ngram_range=(1, 1)):
+										   binarize=False, tf_normalisation=False, ngram_range=(1, 1)):
 	vectorized_labelled_train = None
 	vectorized_labelled_test = None
 	vectorized_unlabelled = None
@@ -604,8 +608,8 @@ def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in
 	return (vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled) if not wrap_in_list else [(vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled)]
 
 
-def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, return_raw=False,
-												 extraction_style='all', binarize=False, tf_normalisation=True,
+def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list=False, return_raw=False,
+												 extraction_style='all', binarize=False, tf_normalisation=False,
 												 ngram_range=(1, 1)):
 	vectorized_labelled = None
 	labels = None
@@ -674,8 +678,8 @@ def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=True, w
 	return (vectorized_labelled, labels) if not wrap_in_list else [(vectorized_labelled, labels)]
 
 
-def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, return_raw=False, top_n_classes=5,
-									 extraction_style='all', binarize=False, tf_normalisation=True, ngram_range=(1, 1)):
+def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list=False, return_raw=False, top_n_classes=5,
+									 extraction_style='all', binarize=False, tf_normalisation=False, ngram_range=(1, 1)):
 	vectorized_labelled_train  = None
 	train_labels = None
 	vectorized_labelled_test = None
@@ -816,8 +820,8 @@ def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=
 	return (vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels) if not wrap_in_list else [(vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels)]
 
 
-def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=False, return_raw=False,
-								  extraction_style='all', binarize=False, tf_normalisation=True,
+def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list=False, return_raw=False,
+								  extraction_style='all', binarize=False, tf_normalisation=False,
 								  ngram_range=(1, 1)):
 	vectorized_labelled = None
 	labels = None
@@ -910,8 +914,8 @@ def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=True, wrap_in_list=Fal
 	return (vectorized_labelled, labels) if not wrap_in_list else [(vectorized_labelled, labels)]
 
 
-def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True, extraction_style='all',
-									  binarize=False, tf_normalisation=True, ngram_range=(1, 1)):
+def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=False, extraction_style='all',
+									  binarize=False, tf_normalisation=False, ngram_range=(1, 1)):
 	vectorized_labelled_train = None
 	train_labels = None
 	vectorized_labelled_test = None
@@ -1019,8 +1023,8 @@ def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True
 			label_map, labelled_features, vocab)
 
 
-def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True, extraction_style='all',
-											  binarize=False, tf_normalisation=True, ngram_range=(1, 2)):
+def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tfidf=False, extraction_style='all',
+											  binarize=False, tf_normalisation=False, ngram_range=(1, 2)):
 	vectorized_labelled_train = None
 	train_labels = None
 	vectorized_labelled_test = None
@@ -1151,8 +1155,8 @@ def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tf
 			label_map, labelled_features, labelled_features_idx)
 
 
-def fetch_twitter_fyp_dataset_vectorized(dataset_path, dataset_name, use_tfidf=True, wrap_in_list=False,
-										 return_raw=False, extraction_style='all', binarize=False, tf_normalisation=True,
+def fetch_twitter_fyp_dataset_vectorized(dataset_path, dataset_name, use_tfidf=False, wrap_in_list=False,
+										 return_raw=False, extraction_style='all', binarize=False, tf_normalisation=False,
 										 ngram_range=(1, 1)):
 	vectorized_labelled = None
 	labels = None
