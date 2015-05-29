@@ -1,4 +1,5 @@
 __author__ = 'thomas'
+import inspect
 
 from sklearn.base import BaseEstimator
 from sklearn.naive_bayes import MultinomialNB
@@ -80,7 +81,11 @@ class ExpectationMaximization(BaseEstimator, EMWeightingSchemeMixin):
 		#self.clf_ = kwargs.pop('classifier', MultinomialNB(*classifier_args, **classifier_kwargs))
 		KhlavKalash = kwargs.pop('classifier', MultinomialNB)
 
-		self.clf_ = KhlavKalash(*classifier_args, **classifier_kwargs)
+		# If a class is passed, instantiate it, if an instance is passed deal with that!
+		if (inspect.isclass(KhlavKalash)):
+			self.clf_ = KhlavKalash(*classifier_args, **classifier_kwargs)
+		else:
+			self.clf_ = KhlavKalash
 
 		super(ExpectationMaximization, self).__init__(*args, **kwargs)
 
@@ -114,7 +119,7 @@ class ExpectationMaximization(BaseEstimator, EMWeightingSchemeMixin):
 				# 	Step 3.2 Retrain on probabilistically labelled data
 				self.clf_ = fit_fn(Z, y_prob, self.clf_, weights, use_max=use_max)
 
-	def fit(self, X, y, Z, max_iter=1, use_max=False, sample_weighting_scheme='alpha', **weighting_scheme_kwargs):
+	def fit(self, X, y, Z, max_iter=1, use_max=False, sample_weighting_scheme='alpha', init='fit', **weighting_scheme_kwargs):
 		"""
 		Use Expectation-Maximization to train a Naive Bayes classifier
 		:param X: labelled data
@@ -126,7 +131,8 @@ class ExpectationMaximization(BaseEstimator, EMWeightingSchemeMixin):
 		weight_fn, fit_fn = self._select_fns(sample_weighting_scheme)
 
 		# Step 1: Model Initialisation
-		self.clf_.fit(X, y)
+		if (init is not None):
+			self.clf_.fit(X, y)
 
 		for _ in range(max_iter):
 			# Step 2: Generating probabilistic labels for the unlabelled data
