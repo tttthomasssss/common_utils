@@ -12,6 +12,7 @@ from sklearn.utils.extmath import logsumexp
 from sklearn.utils.extmath import safe_sparse_dot
 import numpy as np
 
+from common import wittgenstein
 
 class NaiveBayesSmoothing(object): # TODO: Convert to Smoothing Mixin
 	@staticmethod
@@ -199,15 +200,17 @@ class MultinomialCNB(MultinomialNB):
 		super(MultinomialCNB, self)._update_feature_log_prob()
 
 		self.complement_feature_log_prob_ = np.zeros(self.feature_log_prob_.shape)
+
+		#mask_size = len(self.classes_) if (max(self.classes_) < len(self.classes_)) else max(self.classes_) + 1
 		mask = np.ones(len(self.classes_), dtype=np.bool)
 
-		for c in self.classes_:
-			mask[c] = False
+		for idx, c in enumerate(self.classes_):
+			mask[idx] = False
 
 			smoothed_complement_fc = (self.feature_count_[mask] + self.alpha).sum(axis=0)
 			smoothed_complement_cc = smoothed_complement_fc.sum()
 
-			self.complement_feature_log_prob_[c] = (np.log(smoothed_complement_fc)
+			self.complement_feature_log_prob_[idx] = (np.log(smoothed_complement_fc)
 													- np.log(smoothed_complement_cc.reshape(-1, 1)))
 
 			mask[:] = True
@@ -239,7 +242,8 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 
 	def __init__(self, *args, **kwargs):
 
-		self.smoothing_fn_ = kwargs.pop('smoothing_fn', self.lidstone_smoothing)
+		smoothing_fn = kwargs.pop('smoothing_fn', self.lidstone_smoothing)
+		self.smoothing_fn_ = smoothing_fn if callable(smoothing_fn) else wittgenstein.prepare_invocation_on_obj(self, smoothing_fn)
 		self.smoothing_args_ = kwargs.pop('smoothing_args', (1.,))
 
 		super(NaiveBayesClassifier, self).__init__(*args, **kwargs)
