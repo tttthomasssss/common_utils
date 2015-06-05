@@ -1,5 +1,7 @@
 setup.py
 algorithms/__init__.py
+algorithms/feature_selection.py
+algorithms/instance_selection.py
 algorithms/semi_supervised.py
 classifiers/__init__.py
 classifiers/naive_bayes.py
@@ -16,9 +18,17 @@ corpus_hacks/__init__.py
 corpus_hacks/aptemod.py
 corpus_hacks/method51.py
 corpus_hacks/rcv1.py
+method51/__init__.py
+method51/model_adapter.py
+method51/model_stats.py
+method52/__init__.py
+method52/model_adapter.py
+method52/model_stats.py
 preprocessing/__init__.py
 preprocessing/data_preparation.py
 preprocessing/twokenize.py
 preprocessing/twormalize.py
 utils/__init__.py
+utils/path_utils.py
 utils/safe_sparse_ops.py
+utils/wrappers.py
