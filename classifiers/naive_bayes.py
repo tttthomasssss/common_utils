@@ -256,10 +256,10 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 		self.log_probs_ = None
 
 
-	def fit(self, X, y, fit_priors=True):
+	def fit(self, X, y, fit_priors=True, class_priors=None):
 		X = self._to_csr(X)
 
-		self._fit_priors(y, fit_priors)
+		self._fit_priors(y, fit_priors, class_priors)
 
 		self._fit_features(X, y)
 
@@ -300,8 +300,8 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 
 		return E
 
-	def sfe_fit(self, X, y, Z): #TODO: Implement SFE/FM as Mixins?
-		self.fit(X, y)
+	def sfe_fit(self, X, y, Z, fit_priors=True, class_priors=None): #TODO: Implement SFE/FM as Mixins?
+		self.fit(X, y, fit_priors=fit_priors, class_priors=class_priors)
 
 		pw_l, _ = self.smoothing_fn_(self.feature_counts_.sum(axis=0), *self.smoothing_args_)
 		pw_Z, _ = self.smoothing_fn_(Z, *self.smoothing_args_)
@@ -311,8 +311,8 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 
 		self.probs_, self.log_probs_ = (sfe_enum / sfe_denom), np.log(sfe_enum) - np.log(sfe_denom)
 
-	def fm_fit(self, X, y, Z, maxiter=50, tol=1e-10):
-		self.fit(X, y)
+	def fm_fit(self, X, y, Z, maxiter=50, tol=1e-10, fit_priors=True, class_priors=None):
+		self.fit(X, y, fit_priors=fit_priors, class_priors=class_priors)
 
 		if (len(self.classes_) > 2):
 			raise NotImplementedError('fm_fit() is only applicable to binary problems at the moment!')
@@ -435,8 +435,9 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 
 		return E
 
-	def _fit_priors(self, y, fit_priors):
+	def _fit_priors(self, y, fit_priors, class_priors=None):
 		self.priors_ = np.bincount(y) / y.sum() if (fit_priors) else np.ones(np.unique(y).shape) * (1 / np.unique(y).shape[0])
+		self.priors_ = self.priors_ if (class_priors is None) else class_priors
 		self.classes_ = np.arange(self.priors_.shape[0])
 		self.log_priors_ = np.nan_to_num(np.log(self.priors_))
 

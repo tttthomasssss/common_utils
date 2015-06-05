@@ -89,35 +89,133 @@ class ExpectationMaximization(BaseEstimator, EMWeightingSchemeMixin):
 
 		super(ExpectationMaximization, self).__init__(*args, **kwargs)
 
-	# TODO: Put in a Mixin(?)
-	def fit_multi_stage(self, X, y, Z, stages=2, max_iter=1, use_max=False, sample_weighting_scheme='alpha', **weighting_scheme_kwargs):
+	def fit_most_certain(self, X, y, Z, threshold=0.5, max_iter=1, use_max=False, sample_weighting_scheme='alpha', **weighting_scheme_kwargs):
 		weight_fn, fit_fn = self._select_fns(sample_weighting_scheme)
 
 		# Step 1: Model Initialisation
 		self.clf_.fit(X, y)
 
 		for _ in range(max_iter):
-			stage_chunk_size = int(Z.shape[0] / stages)
-			stage_chunk_offset = 0
-			to_label_idx = instance_selection.margin_of_confidence_ranking(self.clf_, Z, ordering='desc', with_evidence=True)
+			# Step 2: Generating probabilistic labels for the unlabelled data
+			y_prob = self.clf_.predict_proba(Z)
 
-			for __ in range(stages):
-				# TODO: Second loop, only select highly MSU ones first, then gradually adding in LSU ones
+			# Conditional Entropy of predicutions under current model
+			H = -((y_prob * np.log(y_prob)).sum(axis=1))
 
-				# Step 2: Generating probabilistic labels for the unlabelled data
-				y_prob = self.clf_.predict_proba(Z[to_label_idx[stage_chunk_offset:stage_chunk_offset + stage_chunk_size]])
+			# Convert uncertainty to certainty
+			H = np.nan_to_num(1 - H)
 
-				stage_chunk_offset += stage_chunk_size + 1
+			# Re-normalise the weights
+			H /= np.amax(H)
 
-				# Step 2.1: Apply weighting scheme
-				weights = weight_fn(y_prob, **weighting_scheme_kwargs)
+			XXX = np.sort(H)
 
-				# Step 3: Retrain classifier on all data
-				#	Step 3.1 Retrain on labelled data
-				self.clf_.partial_fit(X, y)
+			# print np.where(XXX <= 0.5)[0].shape
+			# print np.where(XXX > 0.5)[0].shape
+			# print np.where(XXX > 0.75)[0].shape
+			# print np.where(XXX > 0.9)[0].shape
+			# print np.where(XXX > 0.95)[0].shape
+			# print np.where(XXX > 0.99)[0].shape
+			# print np.where(XXX > 0.999)[0].shape
+			# print np.where(XXX > 0.9999999)[0].shape
+			# print np.where(XXX > 0.9999999999)[0].shape
+			# print np.where(XXX == 1.)[0].shape
 
-				# 	Step 3.2 Retrain on probabilistically labelled data
-				self.clf_ = fit_fn(Z, y_prob, self.clf_, weights, use_max=use_max)
+			# import os
+			# from matplotlib import pyplot as plt
+			# plt.figure(figsize=(18, 9), dpi=600, facecolor='w', edgecolor='k')
+			# plt.xlabel('X')
+			# plt.ylabel('Certainty')
+			# plt.title('Certainty over instances')
+			# plot_name = 'certainty_over_instances.png'
+			# plt.grid(True)
+			# plt.hold(True)
+			# plt.ylim(0., 1.)
+			# plt.margins(0.01)
+			# x = np.arange(XXX.shape[0])
+			# plt.plot(XXX)
+			# plt.savefig(os.path.join('/Volumes/LocalDataHD/thk22/DevSandbox/InfiniteSandbox/_results/em_multi_stage', plot_name))
+			# plt.close()
+
+			# TODO: Second loop, only select highly MSU ones first, then gradually adding in LSU ones
+
+			# Step 2.1: Apply weighting scheme
+			weights = weight_fn(y_prob, **weighting_scheme_kwargs)
+
+			# Step 3: Retrain classifier on all data
+			#	Step 3.1 Retrain on labelled data
+			self.clf_.partial_fit(X, y)
+
+			#idx = np.where(H < threshold)
+			idx = np.where(H == 1.)
+
+			# 	Step 3.2 Retrain on probabilistically labelled data
+			self.clf_ = fit_fn(Z[idx], y_prob[idx], self.clf_, weights[idx], use_max=use_max)
+
+	# TODO: Put in a Mixin(?)
+	def fit_multi_stage(self, X, y, Z, stages=[1., 0.999], max_iter=1, use_max=False, sample_weighting_scheme='alpha', **weighting_scheme_kwargs):
+		weight_fn, fit_fn = self._select_fns(sample_weighting_scheme)
+
+		# Step 1: Model Initialisation
+		self.clf_.fit(X, y)
+
+		for _ in range(max_iter):
+
+			y_prob = self.clf_.predict_proba(Z)
+
+			# Conditional Entropy of predicutions under current model
+			H = -((y_prob * np.log(y_prob)).sum(axis=1))
+
+			# Convert uncertainty to certainty
+			H = np.nan_to_num(1 - H)
+
+			# Re-normalise the weights
+			H /= np.amax(H)
+
+			# Step 2.1: Apply weighting scheme
+			weights = weight_fn(y_prob, **weighting_scheme_kwargs)
+
+			# Step 3: Retrain classifier on all data
+			#	Step 3.1 Retrain on labelled data
+			self.clf_.partial_fit(X, y)
+
+			idx = np.where(H >= stages[0])
+			idx_other = np.where(H < stages[0])
+
+			C = Z[idx]
+			y_c = y_prob[idx]
+			w_c = weights[idx]
+
+			# Step 3.2 Retrain on probabilistically labelled data (most certain only)
+			self.clf_ = fit_fn(Z[idx], y_prob[idx], self.clf_, weights[idx], use_max=use_max)
+
+			# Re-classify rest
+			y_prob = self.clf_.predict_proba(Z[idx_other])
+
+			# Conditional Entropy of predicutions under current model
+			H = -((y_prob * np.log(y_prob)).sum(axis=1))
+
+			# Convert uncertainty to certainty
+			H = np.nan_to_num(1 - H)
+
+			# Re-normalise the weights
+			H /= np.amax(H)
+
+			# Step 2.1: Apply weighting scheme
+			weights = weight_fn(y_prob, **weighting_scheme_kwargs)
+
+			# Step 3: Retrain classifier on all data
+			#	Step 3.1 Retrain on labelled data
+			self.clf_.partial_fit(X, y)
+			self.clf_ = fit_fn(C, y_c, self.clf_, w_c, use_max=use_max)
+
+			idx = np.where(H >= stages[0])
+			idx_other = np.where(H < stages[0])
+
+			# Step 3.2 Retrain on probabilistically labelled data (most certain only)
+			self.clf_ = fit_fn(Z[idx], y_prob[idx], self.clf_, weights[idx], use_max=use_max)
+
+
 
 	def fit(self, X, y, Z, max_iter=1, use_max=False, sample_weighting_scheme='alpha', init='fit', **weighting_scheme_kwargs):
 		"""
