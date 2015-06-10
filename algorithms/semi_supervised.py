@@ -1,8 +1,9 @@
-__author__ = 'thomas'
+from __future__ import division
 import inspect
 
 from sklearn.base import BaseEstimator
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.preprocessing import binarize
 import numpy as np
 
 from . import instance_selection
@@ -89,6 +90,72 @@ class ExpectationMaximization(BaseEstimator, EMWeightingSchemeMixin):
 
 		super(ExpectationMaximization, self).__init__(*args, **kwargs)
 
+	def fit_settles(self, X, y, Z, labelled_features, label_map, vocabulary, pseudo_count=50, co_occurrence_threshold=0.75, max_iter=1, use_max=False, sample_weighting_scheme='alpha', **weighting_scheme_kwargs):
+		weight_fn, fit_fn = self._select_fns(sample_weighting_scheme)
+
+		X_init = np.ones(X.shape)
+
+		for label, feature_map in labelled_features.iteritems():
+			for feature in feature_map.keys():
+				cleaned_feat = feature.strip().replace('_', ' ')
+				if (cleaned_feat in vocabulary):
+
+					X_init[y == label_map[label], vocabulary.keys().index(cleaned_feat)] = pseudo_count
+					feat_count = X[y == label_map[label], vocabulary.keys().index(cleaned_feat)].sum()
+
+					for y_c in np.unique(y):
+						y_c_feat_count = X[y == y_c, vocabulary.keys().index(cleaned_feat)].sum()
+						if (y_c != label_map[label] and feat_count > 0 and y_c_feat_count >= (feat_count * co_occurrence_threshold)):
+							X_init[y == y_c, vocabulary.keys().index(cleaned_feat)] = pseudo_count
+
+		# Step 1: Model Initialisation
+		#self.clf_.fit(X + X_init, y)
+		#self.clf_ = MultinomialNB(fit_prior=False)
+		self.clf_.fit(X_init, y)
+
+		for _ in range(max_iter):
+			# Step 2: Generating probabilistic labels for the unlabelled data
+			y_prob = self.clf_.predict_proba(Z)
+
+			# Step 2.1: Apply weighting scheme
+			weights = weight_fn(y_prob, **weighting_scheme_kwargs)
+
+			# Step 3: Retrain classifier on all data
+			#	Step 3.1 Retrain on labelled data
+			self.clf_.partial_fit(X + X_init, y)
+			#self.clf_ = MultinomialNB()
+			#self.clf_.fit(X + X_init, y)
+
+			# 	Step 3.2 Retrain on probabilistically labelled data
+			self.clf_ = fit_fn(Z, y_prob, self.clf_, weights, use_max=use_max)
+
+	def fit_max_knowledge(self, X, y, Z, threshold=0.5, max_iter=1, use_max=False, sample_weighting_scheme='alpha', **weighting_scheme_kwargs):
+		weight_fn, fit_fn = self._select_fns(sample_weighting_scheme)
+
+		# Step 1: Model Initialisation
+		self.clf_.fit(X, y)
+
+		for _ in range(max_iter):
+			# Step 2: Generating probabilistic labels for the unlabelled data
+			y_prob = self.clf_.predict_proba(Z)
+
+			K = binarize(Z).sum(axis=1) / X.shape[1]
+
+			# Normalise K
+			K /= np.amax(K)
+
+			Z_idx = np.squeeze(np.asarray((np.where(K > threshold)[0])))
+
+			# Step 2.1: Apply weighting scheme
+			weights = weight_fn(y_prob, **weighting_scheme_kwargs)
+
+			# Step 3: Retrain classifier on all data
+			#	Step 3.1 Retrain on labelled data
+			self.clf_.partial_fit(X, y)
+
+			# 	Step 3.2 Retrain on probabilistically labelled data
+			self.clf_ = fit_fn(Z[Z_idx], y_prob[Z_idx], self.clf_, weights[Z_idx], use_max=use_max)
+
 	def fit_most_certain(self, X, y, Z, threshold=0.5, max_iter=1, use_max=False, sample_weighting_scheme='alpha', **weighting_scheme_kwargs):
 		weight_fn, fit_fn = self._select_fns(sample_weighting_scheme)
 
@@ -160,7 +227,7 @@ class ExpectationMaximization(BaseEstimator, EMWeightingSchemeMixin):
 		self.clf_.fit(X, y)
 
 		for _ in range(max_iter):
-
+			# Step 2: Generating probabilistic labels for the unlabelled data
 			y_prob = self.clf_.predict_proba(Z)
 
 			# Conditional Entropy of predicutions under current model

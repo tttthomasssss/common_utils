@@ -189,7 +189,7 @@ def fetch_vectorized_datasets_for_keys(keys, **kwargs):
 
 def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_key, use_tfidf=False, return_raw=False,
 														extraction_style='all', binarize=False, tf_normalisation=False,
-														ngram_range=(1, 1)):
+														ngram_range=(1, 1),force_recreate_dataset=False):
 	vectorized_labelled_train = None
 	raw_train_data = None
 	labels_train = None
@@ -219,7 +219,7 @@ def fetch_20newsgroups_dataset_binarised_and_vectorized(dataset_path, category_k
 
 	path_exists = os.path.exists(os.path.join(dataset_path, train_data_name)) if not return_raw else os.path.exists(os.path.join(dataset_path, raw_train_data_name))
 
-	if (path_exists):
+	if (not force_recreate_dataset and path_exists):
 		labels_train = joblib.load(os.path.join(dataset_path, train_labels_name))
 		labels_test = joblib.load(os.path.join(dataset_path, test_labels_name))
 		if (return_raw):
@@ -337,7 +337,8 @@ def fetch_20newsgroups_dataset_ternarised_and_vectorized(dataset_path, categorie
 
 
 def fetch_20newsgroups_dataset_vectorized(dataset_path, use_tfidf=False, extraction_style='all',
-										  binarize=False, tf_normalisation=False, ngram_range=(1, 1)):
+										  binarize=False, tf_normalisation=False, ngram_range=(1, 1),
+										  force_recreate_dataset=False):
 	vectorized_labelled_train = None
 	labels_train = None
 	vectorized_labelled_test = None
@@ -358,7 +359,8 @@ def fetch_20newsgroups_dataset_vectorized(dataset_path, use_tfidf=False, extract
 		count_vectors_train_name = '_'.join([count_vectors_train_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 		count_vectors_test_name = '_'.join([count_vectors_test_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 
-	if (os.path.exists(os.path.join(dataset_path, tfidf_vectors_train_name if use_tfidf else count_vectors_test_name))):
+	if (not force_recreate_dataset and
+			os.path.exists(os.path.join(dataset_path, tfidf_vectors_train_name if use_tfidf else count_vectors_test_name))):
 		vectorized_labelled_train = joblib.load(os.path.join(dataset_path, tfidf_vectors_train_name if use_tfidf else count_vectors_train_name))
 		vectorized_labelled_test = joblib.load(os.path.join(dataset_path, tfidf_vectors_test_name if use_tfidf else count_vectors_test_name))
 		labels_train = joblib.load(os.path.join(dataset_path, 'train_labels'))
@@ -402,11 +404,13 @@ def fetch_20newsgroups_dataset_vectorized(dataset_path, use_tfidf=False, extract
 
 
 def fetch_webkb_dataset_vectorized(dataset_path, use_tfidf=False, extraction_style='all',
-								   binarize=False, tf_normalisation=False, ngram_range=(1, 1)):
+								   binarize=False, tf_normalisation=False, ngram_range=(1, 1),
+								   force_recreate_dataset=False):
 	vectorized_train = None
 	train_labels = None
 
-	if (os.path.exists(os.path.join(dataset_path, 'tfidf_vectors_labelled' if use_tfidf else 'count_vectors_labelled'))):
+	if (not force_recreate_dataset and
+			os.path.exists(os.path.join(dataset_path, 'tfidf_vectors_labelled' if use_tfidf else 'count_vectors_labelled'))):
 		vectorized_train = joblib.load(os.path.join(dataset_path, 'tfidf_vectors_labelled' if use_tfidf else 'count_vectors_labelled'))
 		train_labels = joblib.load(os.path.join(dataset_path, 'train_labels'))
 	else:
@@ -427,14 +431,16 @@ def fetch_webkb_dataset_vectorized(dataset_path, use_tfidf=False, extraction_sty
 
 
 def fetch_toy_example_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list=False,
-										 extraction_style='all', tf_normalisation=False, ngram_range=(1, 1)):
+										 extraction_style='all', tf_normalisation=False, ngram_range=(1, 1),
+										 force_recreate_dataset=False):
 	vectorized_labelled_train = None
 	vectorized_labelled_test = None
 	vectorized_unlabelled = None
 	train_labels = None
 	test_labels = None
 
-	if (os.path.exists(os.path.join(dataset_path, 'tfidf_vectors_labelled_train' if use_tfidf else 'count_vectors_labelled_train'))):
+	if (not force_recreate_dataset and
+			os.path.exists(os.path.join(dataset_path, 'tfidf_vectors_labelled_train' if use_tfidf else 'count_vectors_labelled_train'))):
 		vectorized_labelled_train = joblib.load(os.path.join(dataset_path, 'tfidf_vectors_labelled_train' if use_tfidf else 'count_vectors_labelled_train'))
 		vectorized_labelled_test = joblib.load(os.path.join(dataset_path, 'tfidf_vectors_labelled_test' if use_tfidf else 'count_vectors_labelled_test'))
 		vectorized_unlabelled = joblib.load(os.path.join(dataset_path, 'tfidf_vectors_unlabelled' if use_tfidf else 'count_vectors_unlabelled'))
@@ -480,7 +486,8 @@ def fetch_toy_example_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_
 
 def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list=False, count_dtype=np.int64,
 										   tfidf_dtype=np.float64, return_raw=False, extraction_style='all',
-										   binarize=False, tf_normalisation=False, ngram_range=(1, 1)):
+										   binarize=False, tf_normalisation=False, ngram_range=(1, 1),
+										   force_recreate_dataset=False):
 	vectorized_labelled_train = None
 	vectorized_labelled_test = None
 	vectorized_unlabelled = None
@@ -519,7 +526,8 @@ def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=False, wrap_i
 		count_labelled_name_test = '_'.join([count_labelled_name_test, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 		count_unlabelled_name = '_'.join([count_unlabelled_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 
-	if (os.path.exists(os.path.join(dataset_path,tfidf_labelled_name_train if use_tfidf else count_labelled_name_train)) and os.path.exists(os.path.join(dataset_path, 'train_docs'))):
+	if (not force_recreate_dataset and
+			os.path.exists(os.path.join(dataset_path,tfidf_labelled_name_train if use_tfidf else count_labelled_name_train)) and os.path.exists(os.path.join(dataset_path, 'train_docs'))):
 		vectorized_labelled_train = joblib.load(os.path.join(dataset_path, tfidf_labelled_name_train if use_tfidf else count_labelled_name_train))
 		vectorized_labelled_test = joblib.load(os.path.join(dataset_path, tfidf_labelled_name_test if use_tfidf else count_labelled_name_test))
 		train_labels = joblib.load(os.path.join(dataset_path, 'labels_train'))
@@ -610,7 +618,7 @@ def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=False, wrap_i
 
 def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list=False, return_raw=False,
 												 extraction_style='all', binarize=False, tf_normalisation=False,
-												 ngram_range=(1, 1)):
+												 ngram_range=(1, 1), force_recreate_dataset=False):
 	vectorized_labelled = None
 	labels = None
 
@@ -630,7 +638,8 @@ def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=False, 
 	# Check if cache exists
 	tail, _ = os.path.split(dataset_path)
 	cache_path = os.path.join(tail, tfidf_vectors_name if use_tfidf else count_vectors_name)
-	if (os.path.exists(cache_path) and os.path.exists(os.path.join(tail, 'raw_data'))):
+	if (not force_recreate_dataset and
+			os.path.exists(cache_path) and os.path.exists(os.path.join(tail, 'raw_data'))):
 		vectorized_labelled = joblib.load(cache_path)
 		labels = joblib.load(os.path.join(tail, 'labels'))
 		raw_data = joblib.load(os.path.join(tail, 'raw_data'))
@@ -679,7 +688,8 @@ def fetch_sms_spam_collection_dataset_vectorized(dataset_path, use_tfidf=False, 
 
 
 def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list=False, return_raw=False, top_n_classes=5,
-									 extraction_style='all', binarize=False, tf_normalisation=False, ngram_range=(1, 1)):
+									 extraction_style='all', binarize=False, tf_normalisation=False, ngram_range=(1, 1),
+									 force_recreate_dataset=False):
 	vectorized_labelled_train  = None
 	train_labels = None
 	vectorized_labelled_test = None
@@ -708,7 +718,8 @@ def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list
 
 	# Check if cache exists
 	cache_path = os.path.join(dataset_path, '%d_%s' % (top_n_classes, tfidf_vectors_train_name if use_tfidf else count_vectors_train_name))
-	if (os.path.exists(cache_path) and os.path.exists(os.path.join(dataset_path, 'raw_labelled_train'))):
+	if (not force_recreate_dataset and
+			os.path.exists(cache_path) and os.path.exists(os.path.join(dataset_path, 'raw_labelled_train'))):
 		vectorized_labelled_train = joblib.load(os.path.join(dataset_path, tfidf_vectors_train_name if use_tfidf else count_vectors_train_name))
 		vectorized_labelled_test = joblib.load(os.path.join(dataset_path, tfidf_vectors_test_name if use_tfidf else count_vectors_test_name))
 		vectorized_unlabelled = joblib.load(os.path.join(dataset_path, 'tfidf_vectors_unlabelled' if use_tfidf else 'count_vectors_unlabelled'))
@@ -822,7 +833,7 @@ def fetch_aptemod_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list
 
 def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list=False, return_raw=False,
 								  extraction_style='all', binarize=False, tf_normalisation=False,
-								  ngram_range=(1, 1)):
+								  ngram_range=(1, 1), force_recreate_dataset=False):
 	vectorized_labelled = None
 	labels = None
 	raw_labelled = None
@@ -843,7 +854,7 @@ def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list=Fa
 	# Check if cache exists
 	cache_path = os.path.join(dataset_path, tfidf_vectors_name if use_tfidf else count_vectors_name)
 	path_exists = os.path.exists(cache_path) if not return_raw else os.path.exists(os.path.join(dataset_path, 'docs'))
-	if (path_exists):
+	if (not force_recreate_dataset and path_exists):
 		labels = joblib.load(os.path.join(dataset_path, 'labels'))
 		if (not return_raw):
 			vectorized_labelled = joblib.load(cache_path)
@@ -915,7 +926,8 @@ def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list=Fa
 
 
 def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=False, extraction_style='all',
-									  binarize=False, tf_normalisation=False, ngram_range=(1, 1)):
+									  binarize=False, tf_normalisation=False, ngram_range=(1, 1),
+									  force_recreate_dataset=False, load_vectorizer=False):
 	vectorized_labelled_train = None
 	train_labels = None
 	vectorized_labelled_test = None
@@ -928,9 +940,11 @@ def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=Fals
 	tfidf_labelled_train_name = 'tfidf_vectors_labelled_train_' + extraction_style if extraction_style != None else 'tfidf_vectors_labelled_train'
 	tfidf_labelled_test_name = 'tfidf_vectors_labelled_test_' + extraction_style if extraction_style != None else 'tfidf_vectors_labelled_test'
 	tfidf_unlabelled_name = 'tfidf_vectors_unlabelled_' + extraction_style if extraction_style != None else 'tfidf_vectors_unlabelled'
+	tfidf_vectorizer_name = 'tfidf_vectorizer_' + extraction_style if extraction_style != None else 'tfidf_vectorizer'
 	count_labelled_train_name = 'count_vectors_labelled_train_' + extraction_style if extraction_style != None else 'count_vectors_labelled_train'
 	count_labelled_test_name = 'count_vectors_labelled_test_' + extraction_style if extraction_style != None else 'count_vectors_labelled_test'
 	count_unlabelled_test_name = 'count_vectors_unlabelled_' + extraction_style if extraction_style != None else 'count_vectors_unlabelled'
+	count_vectorizer_name = 'count_vectorizer_' + extraction_style if extraction_style != None else 'count_vectorizer'
 
 	if (binarize):
 		tfidf_labelled_train_name += '_binary'
@@ -939,7 +953,7 @@ def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=Fals
 		count_labelled_train_name += '_binary'
 		count_labelled_test_name += '_binary'
 		count_unlabelled_test_name += '_binary'
-
+		
 	if (tf_normalisation):
 		count_labelled_train_name += '_tf_norm'
 		count_labelled_test_name += '_tf_norm'
@@ -949,12 +963,15 @@ def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=Fals
 		tfidf_labelled_train_name = '_'.join([tfidf_labelled_train_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 		tfidf_labelled_test_name = '_'.join([tfidf_labelled_test_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 		tfidf_unlabelled_name = '_'.join([tfidf_unlabelled_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
+		tfidf_vectorizer = '_'.join([tfidf_vectorizer_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 		count_labelled_train_name = '_'.join([count_labelled_train_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 		count_labelled_test_name = '_'.join([count_labelled_test_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 		count_unlabelled_test_name = '_'.join([count_unlabelled_test_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
+		count_vectorizer = '_'.join([count_vectorizer_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 
 	# Check if cached stuff exists
-	if (os.path.exists(os.path.join(dataset_path, dataset_name, tfidf_labelled_train_name if use_tfidf else count_labelled_train_name))):
+	if (not force_recreate_dataset and
+			os.path.exists(os.path.join(dataset_path, dataset_name, tfidf_labelled_train_name if use_tfidf else count_labelled_train_name))):
 		vectorized_labelled_train = joblib.load(os.path.join(dataset_path, dataset_name, tfidf_labelled_train_name if use_tfidf else count_labelled_train_name))
 		train_labels = joblib.load(os.path.join(dataset_path, dataset_name, 'train_labels'))
 		vectorized_labelled_test = joblib.load(os.path.join(dataset_path, dataset_name, tfidf_labelled_test_name if use_tfidf else count_labelled_test_name))
@@ -962,6 +979,13 @@ def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=Fals
 		vectorized_unlabelled = joblib.load(os.path.join(dataset_path, dataset_name, tfidf_unlabelled_name if use_tfidf else count_unlabelled_test_name))
 		label_map = joblib.load(os.path.join(dataset_path, dataset_name, 'label_map'))
 		labelled_features = joblib.load(os.path.join(dataset_path, dataset_name, 'labelled_features'))
+
+		if (load_vectorizer):
+			tfidf_vectorizer = joblib.load(os.path.join(dataset_path, dataset_name, tfidf_vectorizer_name))
+			count_vectorizer = joblib.load(os.path.join(dataset_path, dataset_name, count_vectorizer_name))
+		else:
+			tfidf_vectorizer = None
+			count_vectorizer = None
 	else:
 		if (os.path.exists(os.path.join(dataset_path, dataset_name))):
 			raw_labelled_train = joblib.load(os.path.join(dataset_path, dataset_name, 'raw_training_docs'))
@@ -1015,16 +1039,20 @@ def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=Fals
 			joblib.dump(test_labels, os.path.join(dataset_path, dataset_name, 'test_labels'))
 			joblib.dump(label_map, os.path.join(dataset_path, dataset_name, 'label_map'))
 
+			joblib.dump(tfidf_vectorizer, os.path.join(dataset_path, dataset_name, tfidf_vectorizer_name))
+			joblib.dump(count_vectorizer, os.path.join(dataset_path, dataset_name, count_vectorizer_name))
+			
 			vectorized_labelled_train = tfidf_vectors_labelled_train if use_tfidf else count_vectors_labelled_train
 			vectorized_labelled_test = tfidf_vectors_labelled_test if use_tfidf else count_vectors_labelled_test
 			vectorized_unlabelled = tfidf_vectors_unlabelled if use_tfidf else count_vectors_unlabelled
 
 	return (vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled,
-			label_map, labelled_features, vocab)
+			label_map, labelled_features, vocab, count_vectorizer, tfidf_vectorizer)
 
 
 def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tfidf=False, extraction_style='all',
-											  binarize=False, tf_normalisation=False, ngram_range=(1, 2)):
+											  binarize=False, tf_normalisation=False, ngram_range=(1, 2),
+											  force_recreate_dataset=False):
 	vectorized_labelled_train = None
 	train_labels = None
 	vectorized_labelled_test = None
@@ -1063,7 +1091,8 @@ def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tf
 		count_unlabelled_test_name = '_'.join([count_unlabelled_test_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 
 	# Check if cached stuff exists
-	if (os.path.exists(os.path.join(dataset_path, dataset_name, tfidf_labelled_train_name if use_tfidf else count_labelled_train_name))):
+	if (not force_recreate_dataset and
+			os.path.exists(os.path.join(dataset_path, dataset_name, tfidf_labelled_train_name if use_tfidf else count_labelled_train_name))):
 		vectorized_labelled_train = joblib.load(os.path.join(dataset_path, dataset_name, tfidf_labelled_train_name if use_tfidf else count_labelled_train_name))
 		train_labels = joblib.load(os.path.join(dataset_path, dataset_name, 'train_labels'))
 		vectorized_labelled_test = joblib.load(os.path.join(dataset_path, dataset_name, tfidf_labelled_test_name if use_tfidf else count_labelled_test_name))
@@ -1157,7 +1186,7 @@ def fetch_method51_classif_dataset_vectorized(dataset_path, dataset_name, use_tf
 
 def fetch_twitter_fyp_dataset_vectorized(dataset_path, dataset_name, use_tfidf=False, wrap_in_list=False,
 										 return_raw=False, extraction_style='all', binarize=False, tf_normalisation=False,
-										 ngram_range=(1, 1)):
+										 ngram_range=(1, 1), force_recreate_dataset=False):
 	vectorized_labelled = None
 	labels = None
 	vectorized_unlabelled = None
@@ -1190,8 +1219,9 @@ def fetch_twitter_fyp_dataset_vectorized(dataset_path, dataset_name, use_tfidf=F
 		count_unlabelled_name = '_'.join([count_unlabelled_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 
 	# Check if cached stuff exists
-	if (os.path.exists(os.path.join(dataset_path, dataset_name, tfidf_labelled_name if use_tfidf else
-		count_labelled_name)) and os.path.exists(os.path.join(dataset_path, dataset_name, 'raw_labelled_data'))):
+	if (not force_recreate_dataset and
+			os.path.exists(os.path.join(dataset_path, dataset_name, tfidf_labelled_name if use_tfidf else
+			count_labelled_name)) and os.path.exists(os.path.join(dataset_path, dataset_name, 'raw_labelled_data'))):
 
 		vectorized_labelled = joblib.load(os.path.join(dataset_path, dataset_name, tfidf_labelled_name if use_tfidf else
 			count_labelled_name))
