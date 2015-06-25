@@ -50,7 +50,7 @@ def _calculate_gold_standard_label_distribution(labels, sample_labels):
 def print_stats_for_models_at_path(p, min_unlabelled=0, min_labelled_training=0, min_gold_standard=0, min_num_labels=0):
 	model_stats = {}
 
-	for idx, subdir in enumerate([xx for xx in [x[0] for x in os.walk(p)] if True if xx != p else False]):
+	for idx, subdir in enumerate([xx for xx in [x[0] for x in os.walk(p)] if xx != p ]):
 		_, model_name = os.path.split(subdir)
 
 		model_stats[model_name] = {}
