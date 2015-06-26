@@ -108,8 +108,15 @@ def print_stats_for_models_at_path(p, min_unlabelled=0, min_labelled_training=0,
 				if (conn.open):
 					conn.close()
 
-	print(json.dumps(model_stats))
+	for key in model_stats.iterkeys():
+		if (len(model_stats[key]) > 0 and key in ['edballsboocheer2', 'debatetwo-salmond', 'cleggchat-trust', 'isisuserbreakdown', 'cleggchat-trust2', 'edspeechboocheer', 'farage-boo-cheer', 'clegg-boo-cheer', '	lbc-clegg-sentiment2', 'party-faithful', 'immigrationbill-explore', 'rombulgb', 'tsipras', 'scotdecides-personality-politics', 'bbc-personality-politics']):
+			print 'Model:', key
+			print '\tNum Labels', model_stats[key]['labels']
+			print '\tNum Training', model_stats[key]['num_labelled_training']
+			print '\tNum Unlabelled', model_stats[key]['num_unlabelled']
+			print '\tNum Testing', model_stats[key]['num_gold_standard']
+			print '-----------------------'
 
 if (__name__ == '__main__'):
-	print_stats_for_models_at_path(os.path.join(paths.get_dataset_path(), 'method51', 'models'), min_num_labels=4)
-	print_stats_for_models_at_path(os.path.join(paths.get_dataset_path(), 'method51', 'models-1'), min_num_labels=4)
+	print_stats_for_models_at_path(os.path.join(paths.get_dataset_path(), 'method51', 'models'))
+	print_stats_for_models_at_path(os.path.join(paths.get_dataset_path(), 'method51', 'models-1'))

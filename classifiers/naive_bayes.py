@@ -6,6 +6,7 @@ import math
 from scipy import sparse
 from scipy.optimize import newton
 from sklearn.base import BaseEstimator
+from sklearn.base import clone
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.utils import check_array
 from sklearn.utils.extmath import logsumexp
@@ -240,26 +241,25 @@ class MultinomialWNB(MultinomialNB):
 
 class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 
-	def __init__(self, *args, **kwargs):
+	def __init__(self, fit_prior=True, class_prior=None, smoothing='lidstone_smoothing', smoothing_args=(1.,)):
 
-		smoothing_fn = kwargs.pop('smoothing_fn', self.lidstone_smoothing)
-		self.smoothing_fn_ = smoothing_fn if callable(smoothing_fn) else wittgenstein.prepare_invocation_on_obj(self, smoothing_fn)
-		self.smoothing_args_ = kwargs.pop('smoothing_args', (1.,))
-
-		super(NaiveBayesClassifier, self).__init__(*args, **kwargs)
-
+		self.smoothing = smoothing
+		self.smoothing_fn = smoothing if callable(smoothing) else wittgenstein.prepare_invocation_on_obj(self, smoothing)
+		self.smoothing_args = smoothing_args
 		self.classes_ = None
 		self.priors_ = None
 		self.log_priors_ = None
 		self.feature_counts_ = None
 		self.probs_ = None
 		self.log_probs_ = None
+		self.fit_prior = fit_prior
+		self.class_prior = class_prior
 
 
-	def fit(self, X, y, fit_priors=True, class_priors=None):
+	def fit(self, X, y):
 		X = self._to_csr(X)
 
-		self._fit_priors(y, fit_priors, class_priors)
+		self._fit_priors(y)
 
 		self._fit_features(X, y)
 
@@ -300,28 +300,23 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 
 		return E
 
-	def sfe_fit(self, X, y, Z, fit_priors=True, class_priors=None): #TODO: Implement SFE/FM as Mixins?
-		self.fit(X, y, fit_priors=fit_priors, class_priors=class_priors)
+	def sfe_fit(self, X, y, Z): #TODO: Implement SFE/FM as Mixins?
+		self.fit(X, y)
 
-		pw_l, _ = self.smoothing_fn_(self.feature_counts_.sum(axis=0), *self.smoothing_args_)
-		pw_Z, _ = self.smoothing_fn_(Z, *self.smoothing_args_)
+		pw_l, _ = self.smoothing_fn(self.feature_counts_.sum(axis=0), *self.smoothing_args)
+		pw_Z, _ = self.smoothing_fn(Z, *self.smoothing_args)
 
 		sfe_enum = np.multiply(((self.probs_ * self.priors_.reshape(len(self.classes_), 1)) / pw_l), pw_Z)
 		sfe_denom = sfe_enum.sum(axis=1)
 
 		self.probs_, self.log_probs_ = (sfe_enum / sfe_denom), np.log(sfe_enum) - np.log(sfe_denom)
 
-	def fm_fit(self, X, y, Z, maxiter=50, tol=1e-10, fit_priors=True, class_priors=None):
-		self.fit(X, y, fit_priors=fit_priors, class_priors=class_priors)
+	def _fm_fit_binary(self, X, y, Z, clf, maxiter=100, tol=1e-10):
 
-		if (len(self.classes_) > 2):
-			raise NotImplementedError('fm_fit() is only applicable to binary problems at the moment!')
+		clf.fit(X, y)
 
-		if (len(self.classes_) < 2):
-			raise ValueError('Only 1 class present, fm_fit() requires 2!')
-
-		pt_L = self.feature_counts_.sum(axis=1) / self.feature_counts_.sum()
-		pw_Z, _ = self.smoothing_fn_(Z, *self.smoothing_args_)
+		pt_L = clf.feature_counts_.sum(axis=1) / clf.feature_counts_.sum()
+		pw_Z, _ = clf.smoothing_fn(Z, *clf.smoothing_args)
 
 		# Shorthands K, l
 		l = pt_L[0] / pt_L[1]
@@ -334,13 +329,13 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 		x0 = [2, 3, 1.5, 4]
 
 		# word count per class pre-computed
-		n_w_pos_sum, n_w_neg_sum = self.feature_counts_[0].sum(), self.feature_counts_[1].sum()
+		n_w_pos_sum, n_w_neg_sum = clf.feature_counts_[0].sum(), clf.feature_counts_[1].sum()
 
 		# Optimisation
-		for i in xrange(self.feature_counts_.shape[1]):
-			if (self.feature_counts_[0, i] > 0 and self.feature_counts_[1, i] > 0):
-				n_w_pos = self.feature_counts_[0, i]
-				n_w_neg = self.feature_counts_[1, i]
+		for i in xrange(clf.feature_counts_.shape[1]):
+			if (clf.feature_counts_[0, i] > 0 and clf.feature_counts_[1, i] > 0):
+				n_w_pos = clf.feature_counts_[0, i]
+				n_w_neg = clf.feature_counts_[1, i]
 				n_not_w_pos = n_w_pos_sum - n_w_pos
 				n_not_w_neg = n_w_neg_sum - n_w_neg
 
@@ -355,12 +350,47 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 						j += 1
 
 				if (opt_val > 0 and opt_val <= target_interval_max[0, i]):
-					self.probs_[0, i] = opt_val
-					self.probs_[1, i] = (pw_Z[0, i] - (opt_val * pt_L[0])) / pt_L[1]
+					clf.probs_[0, i] = opt_val
+					clf.probs_[1, i] = (pw_Z[0, i] - (opt_val * pt_L[0])) / pt_L[1]
 
 		# Re-normalise
-		self.probs_ /= self.probs_.sum(axis=1).reshape(2, 1)
-		self.log_probs_ = np.log(self.probs_)
+		clf.probs_ /= clf.probs_.sum(axis=1).reshape(2, 1)
+		clf.log_probs_ = np.log(clf.probs_)
+
+		return clf
+
+	def fm_fit(self, X, y, Z, maxiter=50, tol=1e-10, fit_priors=True, class_priors=None):
+
+		if (np.unique(y).shape[0] > 2):
+			y_c = np.ones(X.shape[0], dtype=np.int8)
+
+			estimators = []
+
+			for c in range(np.unique(y).shape[0]):
+				c_mask = y == c
+				y_c[c_mask] = 0
+
+				clf = clone(self)
+				estimators.append(self._fm_fit_binary(X, y_c, Z, clf, maxiter=maxiter, tol=tol))
+
+				y_c[:] = 1
+
+			# Stuff together the estimators again
+			self._fit_priors(y)
+
+			n_classes = len(self.classes_)
+
+			self.feature_counts_ = np.zeros((n_classes, estimators[0].feature_counts_.shape[1]))
+			self.probs_ = np.zeros((n_classes, estimators[0].probs_.shape[1]))
+			for c in range(len(self.classes_)):
+				self.feature_counts_[c, :] = estimators[c].feature_counts_[0, :]
+				self.probs_[c, :] = estimators[c].probs_[0, :]
+
+			# Re-normalise
+			self.probs_ /= self.probs_.sum(axis=1).reshape(len(self.classes_), 1)
+			self.log_probs_ = np.log(self.probs_)
+		else:
+			self._fm_fit_binary(X, y, Z, maxiter=maxiter, tol=tol, clf=self)
 
 	def _optimise_feature_marginals(self, p_w_pos, k, l, n_w_pos, n_w_neg, n_not_w_pos, n_not_w_neg):
 		return 	(n_w_pos / p_w_pos) + \
@@ -435,9 +465,9 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 
 		return E
 
-	def _fit_priors(self, y, fit_priors, class_priors=None):
-		self.priors_ = np.bincount(y) / y.sum() if (fit_priors) else np.ones(np.unique(y).shape) * (1 / np.unique(y).shape[0])
-		self.priors_ = self.priors_ if (class_priors is None) else class_priors
+	def _fit_priors(self, y):
+		self.priors_ = np.bincount(y) / y.sum() if (self.fit_prior) else np.ones(np.unique(y).shape) * (1 / np.unique(y).shape[0])
+		self.priors_ = self.priors_ if (self.class_prior is None) else self.class_prior
 		self.classes_ = np.arange(self.priors_.shape[0])
 		self.log_priors_ = np.nan_to_num(np.log(self.priors_))
 
@@ -449,8 +479,8 @@ class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
 			self.feature_counts_[y_i, :] = X[np.where(y == y_i)].sum(axis=0)
 
 		#self.probs_, self.log_probs_ = self.smoothing_fn_(self.feature_counts_, *self.smoothing_args_)
-		args = (self.feature_counts_,) + self.smoothing_args_
-		self.probs_, self.log_probs_ = self.smoothing_fn_(*args)
+		args = (self.feature_counts_,) + self.smoothing_args
+		self.probs_, self.log_probs_ = self.smoothing_fn(*args)
 
 	def _joint_log_likelihood(self, X):
 		return safe_sparse_dot(X, self.log_probs_.T) + self.log_priors_

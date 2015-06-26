@@ -13,11 +13,11 @@ from common import paths
 PROJECT_PATH = os.path.dirname(os.path.dirname(__file__))
 
 
-def load_raw_model_data(model_name):
+def load_raw_model_data(model_name, subpath='models'):
 	db_credentials = json.load(open(os.path.join(PROJECT_PATH, 'private_resources', 'mysql_credentials.json')))
 
 	# Paths
-	base_path = os.path.join(paths.get_dataset_path(), 'method51', 'models')
+	base_path = os.path.join(paths.get_dataset_path(), 'method51', subpath)
 
 	sample_path = os.path.join(base_path, '%s-sample.json' % (model_name,))
 	datasource_path = os.path.join(base_path, '%s-data-source.json' % (model_name,))
@@ -124,12 +124,15 @@ if (__name__ == '__main__'):
 	#models = ['wow-misogyny-terms-uk-sw', 'immigtation-sw-cameron', 'Immigration_extendedtermsrelevancy', 'duggan-main', 'allmales-filtered2', 'shellfiltration', 'duggan-relevant-verdict-comment', 'isis-kafir-english-relev', 'miliband', 'wow-abusive-or-not']
 	#models = ['cleggfaragesearchrelevencytest', 'floodingbtr5', 'bigdebatespeakersplitter-posneg', 'wow-rape-news']
 	#models = ['bigdebatespeakersplitter']
-	models = ['clacton-users-parties']
+	#models = ['clacton-users-parties']
+
+	#models = ['debatetwo-salmond', 'isisuserbreakdown', 'edspeechboocheer']
+	models = ['farage-boo-cheer', 'clegg-boo-cheer', 'tsipras', 'scotdecides-personality-politics']
 
 
 	for m in models:
 		print('Processing %s...' % (m,))
-		load_raw_model_data(m)
+		load_raw_model_data(m , subpath='models-1')
 
 		print('Converting %s...'  % (m,))
 		convert_raw_model_data(m)

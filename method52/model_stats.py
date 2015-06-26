@@ -94,6 +94,10 @@ def print_stats_for_models_at_path(p, min_unlabelled=0, min_labelled_training=0,
 				model_stats[model_name]['num_gold_standard'] = num_gold_standard
 				model_stats[model_name]['gold_standard_label_distribution'] = gold_standard_label_distribution
 
+	for key in model_stats.iterkeys():
+		print 'Model:', model_stats[key]
+		print '-----------------------'
+
 	print(json.dumps(model_stats))
 
 if (__name__ == '__main__'):
