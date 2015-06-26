@@ -927,7 +927,7 @@ def fetch_rcv1_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list=Fa
 
 def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=False, extraction_style='all',
 									  binarize=False, tf_normalisation=False, ngram_range=(1, 1),
-									  force_recreate_dataset=False, load_vectorizer=False):
+									  force_recreate_dataset=False, load_vectorizer=False, min_df=None):
 	vectorized_labelled_train = None
 	train_labels = None
 	vectorized_labelled_test = None
@@ -969,6 +969,9 @@ def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=Fals
 		count_unlabelled_test_name = '_'.join([count_unlabelled_test_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 		count_vectorizer = '_'.join([count_vectorizer_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 
+	# Vocab Name
+	vocab_name = '_'.join(['vocab', 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
+
 	# Check if cached stuff exists
 	if (not force_recreate_dataset and
 			os.path.exists(os.path.join(dataset_path, dataset_name, tfidf_labelled_train_name if use_tfidf else count_labelled_train_name))):
@@ -979,6 +982,7 @@ def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=Fals
 		vectorized_unlabelled = joblib.load(os.path.join(dataset_path, dataset_name, tfidf_unlabelled_name if use_tfidf else count_unlabelled_test_name))
 		label_map = joblib.load(os.path.join(dataset_path, dataset_name, 'label_map'))
 		labelled_features = joblib.load(os.path.join(dataset_path, dataset_name, 'labelled_features'))
+		vocab = joblib.load(os.path.join(dataset_path, dataset_name, vocab_name))
 
 		if (load_vectorizer):
 			tfidf_vectorizer = joblib.load(os.path.join(dataset_path, dataset_name, tfidf_vectorizer_name))
@@ -1041,7 +1045,9 @@ def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=Fals
 
 			joblib.dump(tfidf_vectorizer, os.path.join(dataset_path, dataset_name, tfidf_vectorizer_name))
 			joblib.dump(count_vectorizer, os.path.join(dataset_path, dataset_name, count_vectorizer_name))
-			
+
+			joblib.dump(vocab, os.path.join(dataset_path, dataset_name, vocab_name))
+
 			vectorized_labelled_train = tfidf_vectors_labelled_train if use_tfidf else count_vectors_labelled_train
 			vectorized_labelled_test = tfidf_vectors_labelled_test if use_tfidf else count_vectors_labelled_test
 			vectorized_unlabelled = tfidf_vectors_unlabelled if use_tfidf else count_vectors_unlabelled
