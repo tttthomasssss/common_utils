@@ -982,7 +982,11 @@ def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=Fals
 		vectorized_unlabelled = joblib.load(os.path.join(dataset_path, dataset_name, tfidf_unlabelled_name if use_tfidf else count_unlabelled_test_name))
 		label_map = joblib.load(os.path.join(dataset_path, dataset_name, 'label_map'))
 		labelled_features = joblib.load(os.path.join(dataset_path, dataset_name, 'labelled_features'))
-		vocab = joblib.load(os.path.join(dataset_path, dataset_name, vocab_name))
+
+		if (os.path.exists(os.path.join(dataset_path, dataset_name, vocab_name))):
+			vocab = joblib.load(os.path.join(dataset_path, dataset_name, vocab_name))
+		else:
+			vocab = joblib.load(os.path.join(dataset_path, dataset_name, 'vocab'))
 
 		if (load_vectorizer):
 			tfidf_vectorizer = joblib.load(os.path.join(dataset_path, dataset_name, tfidf_vectorizer_name))
