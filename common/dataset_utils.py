@@ -936,6 +936,8 @@ def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=Fals
 	label_map = None
 	labelled_features = None
 	vocab = None
+	count_vectorizer = None
+	tfidf_vectorizer = None
 
 	tfidf_labelled_train_name = 'tfidf_vectors_labelled_train_' + extraction_style if extraction_style != None else 'tfidf_vectors_labelled_train'
 	tfidf_labelled_test_name = 'tfidf_vectors_labelled_test_' + extraction_style if extraction_style != None else 'tfidf_vectors_labelled_test'
@@ -963,11 +965,11 @@ def fetch_ws_paper_dataset_vectorized(dataset_path, dataset_name, use_tfidf=Fals
 		tfidf_labelled_train_name = '_'.join([tfidf_labelled_train_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 		tfidf_labelled_test_name = '_'.join([tfidf_labelled_test_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 		tfidf_unlabelled_name = '_'.join([tfidf_unlabelled_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
-		tfidf_vectorizer = '_'.join([tfidf_vectorizer_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
+		tfidf_vectorizer_name = '_'.join([tfidf_vectorizer_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 		count_labelled_train_name = '_'.join([count_labelled_train_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 		count_labelled_test_name = '_'.join([count_labelled_test_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 		count_unlabelled_test_name = '_'.join([count_unlabelled_test_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
-		count_vectorizer = '_'.join([count_vectorizer_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
+		count_vectorizer_name = '_'.join([count_vectorizer_name, 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
 
 	# Vocab Name
 	vocab_name = '_'.join(['vocab', 'ngram_range', str(ngram_range[0]), str(ngram_range[1])])
