@@ -7,6 +7,7 @@ from scipy import sparse
 from scipy.optimize import newton
 from sklearn.base import BaseEstimator
 from sklearn.base import clone
+from sklearn.naive_bayes import BernoulliNB
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.utils import check_array
 from sklearn.utils.extmath import logsumexp
@@ -237,6 +238,36 @@ class MultinomialWNB(MultinomialNB):
 			to compute the complement counts"""
 		super(MultinomialWNB, self)._update_feature_log_prob()
 		self.feature_log_prob_ /= np.abs(self.feature_log_prob_).sum(axis=1).reshape(-1, 1)
+
+
+class SSLBernoulliNB(BernoulliNB):
+
+	def __init__(self, alpha=1.0, binarize=.0, fit_prior=True,
+				 class_prior=None):
+
+		self.feature_prob_ = None
+		self.alpha = alpha
+		self.binarize = binarize
+		self.fit_prior = fit_prior
+		self.class_prior = class_prior
+
+	def _update_feature_log_prob(self):
+		super(SSLBernoulliNB, self)._update_feature_log_prob()
+
+		self.feature_prob_ = np.exp(self.feature_log_prob_)
+
+	def sfe_fit(self, X, y, Z): #TODO: Implement SFE/FM as Mixins?
+		self.fit(X, y)
+
+		smoothed_fc = self.feature_count_.sum(axis=0) + (self.alpha * len(self.classes_))
+		smoothed_cc = (self.class_count_ + self.alpha * len(self.classes_)).sum()
+		pw_l = smoothed_fc / smoothed_cc
+		pw_Z = (Z.sum(axis=0) + self.alpha) / Z.sum()
+
+		sfe_enum = np.multiply(((self.feature_prob_ * np.exp(self.class_log_prior_).reshape(len(self.class_count_), 1)) / pw_l), pw_Z)
+		sfe_denom = sfe_enum.sum(axis=1)
+
+		self.feature_log_prob_ = np.asarray(np.log(sfe_enum) - np.log(sfe_denom))
 
 
 class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
