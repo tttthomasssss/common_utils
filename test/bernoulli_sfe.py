@@ -36,5 +36,11 @@ def bernoulli_sfe_test():
 	print 'SSLBNB ACC:', accuracy_score(y_test, pred)
 	print 'SSLBNB F1S:', f1_score(y_test, pred, average='micro')
 
+	bnb = SSLBernoulliNB(alpha=nb_smoothing_alpha_binary)
+	bnb.fm_fit(X_train, y_train, Z)
+	pred = bnb.predict(X_test)
+	print 'SSLBNB ACC:', accuracy_score(y_test, pred)
+	print 'SSLBNB F1S:', f1_score(y_test, pred, average='micro')
+
 if (__name__ == '__main__'):
 	bernoulli_sfe_test()

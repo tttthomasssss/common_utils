@@ -9,6 +9,8 @@ from sklearn.base import BaseEstimator
 from sklearn.base import clone
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.preprocessing import LabelBinarizer
+from sklearn.utils import check_X_y
 from sklearn.utils import check_array
 from sklearn.utils.extmath import logsumexp
 from sklearn.utils.extmath import safe_sparse_dot
@@ -256,18 +258,138 @@ class SSLBernoulliNB(BernoulliNB):
 
 		self.feature_prob_ = np.exp(self.feature_log_prob_)
 
+	def _fit_prior(self, y, sample_weight=None):
+
+		labelbin = LabelBinarizer()
+		Y = labelbin.fit_transform(y)
+		self.classes_ = labelbin.classes_
+		if Y.shape[1] == 1:
+			Y = np.concatenate((1 - Y, Y), axis=1)
+
+		# LabelBinarizer().fit_transform() returns arrays with dtype=np.int64.
+		# We convert it to np.float64 to support sample_weight consistently;
+		# this means we also don't have to cast X to floating point
+		Y = Y.astype(np.float64)
+		if sample_weight is not None:
+			Y *= check_array(sample_weight).T
+
+		class_prior = self.class_prior
+
+		# Count raw events from data before updating the class log prior
+		# and feature log probas
+		n_effective_classes = Y.shape[1]
+		self.class_count_ = np.zeros(n_effective_classes, dtype=np.float64)
+		self.class_count_ += Y.sum(axis=0)
+
+		super(SSLBernoulliNB, self)._update_class_log_prior()
+
 	def sfe_fit(self, X, y, Z): #TODO: Implement SFE/FM as Mixins?
 		self.fit(X, y)
 
 		smoothed_fc = self.feature_count_.sum(axis=0) + (self.alpha * len(self.classes_))
 		smoothed_cc = (self.class_count_ + self.alpha * len(self.classes_)).sum()
+
+		smoothed_fz = Z.sum(axis=0) + self.alpha
+
 		pw_l = smoothed_fc / smoothed_cc
-		pw_Z = (Z.sum(axis=0) + self.alpha) / Z.sum()
+		pw_Z = smoothed_fz / smoothed_fz.sum()
 
 		sfe_enum = np.multiply(((self.feature_prob_ * np.exp(self.class_log_prior_).reshape(len(self.class_count_), 1)) / pw_l), pw_Z)
 		sfe_denom = sfe_enum.sum(axis=1)
 
 		self.feature_log_prob_ = np.asarray(np.log(sfe_enum) - np.log(sfe_denom))
+
+	def _fm_fit_binary(self, X, y, Z, clf, maxiter=100, tol=1e-10):
+
+		clf.fit(X, y)
+
+		smoothed_fc = clf.feature_count_.sum(axis=0) + (clf.alpha * len(clf.classes_))
+		smoothed_cc = (clf.class_count_ + clf.alpha * len(clf.classes_)).sum()
+
+		smoothed_fz = Z.sum(axis=0) + clf.alpha
+
+		pt_L = smoothed_fc / smoothed_cc
+		pw_Z = smoothed_fz / smoothed_fz.sum()
+
+		# Shorthands K, l
+		l = pt_L[0] / pt_L[1]
+		K = pw_Z / pt_L[1]
+
+		# Target Interval
+		target_interval_max = pw_Z / pt_L[0]
+
+		# Starting points
+		x0 = [2, 3, 1.5, 4]
+
+		# word count per class pre-computed
+		n_w_pos_sum, n_w_neg_sum = clf.feature_count_[0].sum(), clf.feature_count_[1].sum()
+
+		# Optimisation
+		for i in xrange(clf.feature_count_.shape[1]):
+			if (clf.feature_count_[0, i] > 0 and clf.feature_count_[1, i] > 0):
+				n_w_pos = clf.feature_count_[0, i]
+				n_w_neg = clf.feature_count_[1, i]
+				n_not_w_pos = n_w_pos_sum - n_w_pos
+				n_not_w_neg = n_w_neg_sum - n_w_neg
+
+				j = 0
+				opt_val = -1
+				while (j < len(x0) and not (opt_val > 0 and opt_val <= target_interval_max[0, i])):
+					try:
+						opt_val = newton(self._optimise_feature_marginals, (target_interval_max[0, i] / x0[j]), args=(K[0, i], l, n_w_pos, n_w_neg, n_not_w_pos, n_not_w_neg), tol=tol, maxiter=maxiter)
+					except RuntimeError: # failed to converge, returns NaN
+						opt_val = -1
+					finally:
+						j += 1
+
+				if (opt_val > 0 and opt_val <= target_interval_max[0, i]):
+					clf.feature_prob_[0, i] = opt_val
+					clf.feature_prob_[1, i] = (pw_Z[0, i] - (opt_val * pt_L[0])) / pt_L[1]
+
+		# Re-normalise
+		clf.feature_prob_ /= clf.feature_prob_.sum(axis=1).reshape(2, 1)
+		clf.feature_log_prob_ = np.log(clf.feature_prob_)
+
+		return clf
+
+	def fm_fit(self, X, y, Z, maxiter=50, tol=1e-10, sample_weight=None):
+
+		if (np.unique(y).shape[0] > 2):
+			y_c = np.ones(X.shape[0], dtype=np.int8)
+
+			estimators = []
+
+			for c in range(np.unique(y).shape[0]):
+				c_mask = y == c
+				y_c[c_mask] = 0
+
+				clf = clone(self)
+				estimators.append(self._fm_fit_binary(X, y_c, Z, clf, maxiter=maxiter, tol=tol))
+
+				y_c[:] = 1
+
+			# Stuff together the estimators again
+			self._fit_prior(y, sample_weight=sample_weight)
+
+			n_classes = len(self.classes_)
+
+			self.feature_count_ = np.zeros((n_classes, estimators[0].feature_count_.shape[1]))
+			self.feature_prob_ = np.zeros((n_classes, estimators[0].feature_prob_.shape[1]))
+			for c in range(len(self.classes_)):
+				self.feature_count_[c, :] = estimators[c].feature_count_[0, :]
+				self.feature_prob_[c, :] = estimators[c].feature_prob_[0, :]
+
+			# Re-normalise
+			self.feature_prob_ /= self.feature_prob_.sum(axis=1).reshape(len(self.classes_), 1)
+			self.feature_log_prob_ = np.log(self.feature_prob_)
+		else:
+			self._fm_fit_binary(X, y, Z, maxiter=maxiter, tol=tol, clf=self)
+
+	def _optimise_feature_marginals(self, p_w_pos, k, l, n_w_pos, n_w_neg, n_not_w_pos, n_not_w_neg):
+		return 	(n_w_pos / p_w_pos) + \
+				(n_not_w_pos / (p_w_pos - 1)) + \
+				((n_w_neg * l) / ((l * p_w_pos) - k)) + \
+				((l * n_not_w_neg) / ((l * p_w_pos) - k + 1))
 
 
 class NaiveBayesClassifier(BaseEstimator, NaiveBayesSmoothingMixin):
