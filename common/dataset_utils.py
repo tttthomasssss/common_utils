@@ -21,6 +21,8 @@ from corpus_hacks.rcv1 import RCV1Index
 from . import paths
 
 
+# TODO: WSD Dataset resource: http://www.cs.cmu.edu/~mfaruqui/suite.html
+
 __REUTERS_APTEMOD__ = 'aptemod'
 __REUTERS_RCV1__ = 'rcv1'
 __20_NEWSGROUPS__ = '20newsgroups'
@@ -1295,3 +1297,38 @@ def fetch_twitter_fyp_dataset_vectorized(dataset_path, dataset_name, use_tfidf=F
 		return (raw_labelled, labels, raw_unlabelled)
 
 	return (vectorized_labelled, labels, vectorized_unlabelled) if not wrap_in_list else [(vectorized_labelled, labels, vectorized_unlabelled)]
+
+
+def fetch_stanford_sentiment_treebank_dataset(dataset_path=os.path.join(paths.get_dataset_path(), 'stanford_sentiment_treebank'),
+											  fine_grained=False, vectorisation='count', force_recreate_dataset=False,
+											  vectorisation_opts={'ngram_range': (1, 2), 'extraction_style': 'all', 'binarize': False,
+																  'tf_normalisation': False}):
+	'''
+	:param dataset_path: Path to dataset on disk
+	:param fine_grained: Whether polarity (2-classes) or fine-grained (5-classes) Sentiment dataset is used
+	:param vectorisation: 'count' for standard BoW vectors, 'tfidf' for TF-IDF vectors, 'word2vec' for word2vec embeddings and 'glove' for GloVe embeddings; default is 'count'
+	:param vectorisation_opts: Options for the vectorisation, e.g. ngram_range for 'count' and 'tfidf', various word2vec params such as 'sg' or 'hs', number of negative samples, etc
+	:param force_recreate_dataset: Whether or not the dataset should be recreated
+	:return: A Dataset
+	'''
+
+	# Create sub_path out of options
+	fine_grained_subpath = '2_class' if not fine_grained else '5_class'
+	path = os.path.join(dataset_path, fine_grained_subpath)
+	for key, value in vectorisation_opts.iteritems():
+		clean_value = str(value).replace(' ', '').replace(',', '-').replace('(', '').replace(')', '').replace('[', '').replace(']', '').strip()
+		path = os.path.join(path, '_'.join([key, clean_value]))
+
+	if (not force_recreate_dataset and os.path.exists(os.path.join(path, 'X_train'))):
+		X_train = joblib.load(os.path.join(path, 'X_train'))
+		y_train = joblib.load(os.path.join(path, 'y_train'))
+		X_valid = joblib.load(os.path.join(path, 'X_valid'))
+		y_valid = joblib.load(os.path.join(path, 'y_valid'))
+		X_test = joblib.load(os.path.join(path, 'X_test'))
+		y_test = joblib.load(os.path.join(path, 'y_test'))
+	else:
+		if (not os.path.exists(path)):
+			os.makedirs(path)
+	# TODO: It is not clear how phrases and sentences map together, hence re-creating the train/valid/test split is not possible
+
+	print 'FINAL PATH:', path
