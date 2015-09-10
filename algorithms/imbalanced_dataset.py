@@ -12,7 +12,7 @@ from scipy import sparse
 from sklearn.neighbors import NearestNeighbors
 
 
-def SMOTE(T, N, k):
+def SMOTE(T, N, k, gap=np.random.random()):
 	'''
 	Returns (N/100) * n_minority_samples synthetic minority samples.
 
@@ -57,7 +57,6 @@ def SMOTE(T, N, k):
 				nn_index = choice(nn[0])
 
 			dif = T[nn_index] - T[i]
-			gap = np.random.random()
 
 			if (sparse.issparse(T)):
 				S[n + i * N, :] = (T[i,:] + gap * dif[:]).toarray()

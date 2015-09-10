@@ -2,6 +2,7 @@ __author__ = 'thk22'
 
 import bz2
 import collections
+import csv
 import json
 import glob
 import pickle
@@ -1332,3 +1333,43 @@ def fetch_stanford_sentiment_treebank_dataset(dataset_path=os.path.join(paths.ge
 	# TODO: It is not clear how phrases and sentences map together, hence re-creating the train/valid/test split is not possible
 
 	print 'FINAL PATH:', path
+
+
+def fetch_scws_dataset(datset_path=os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'apt_processed')):
+
+	#if (os.path.exists(datset_path)):
+	#	pass
+	#else:
+	with open(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'ratings.txt'), 'rb') as raw_dataset, \
+		open(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed', 'words.csv'), 'wb') as csv_words, \
+		open(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed', 'words_incl_pos.csv'), 'wb') as csv_words_incl_pos:
+
+		csv_words_writer = csv.writer(csv_words)
+		csv_words_incl_pos_writer = csv.writer(csv_words_incl_pos)
+
+		for line in raw_dataset:
+			parts = line.split('\t')
+			row_id = parts[0]
+			word1 = parts[1]
+			word1_incl_pos = '%s\\%s' % (word1, parts[2])
+			word2 = parts[3]
+			word2_incl_pos = '%s\\%s'  % (word2, parts[4])
+			ctx1 = parts[5].replace('<b>', '').replace('</b>', '').replace('</ b>', '')
+			ctx2 = parts[6].replace('<b>', '').replace('</b>', '').replace('</ b>', '')
+			avg_sim_rating = float(parts[7])
+
+			words_incl_pos = [row_id, word1_incl_pos, word2_incl_pos, avg_sim_rating]
+			words = [row_id, word1, word2, avg_sim_rating]
+
+			# Write Words CSV
+			csv_words_writer.writerow(words)
+			csv_words_incl_pos_writer.writerow(words_incl_pos)
+
+			# Write Sentences
+			os.makedirs(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed', row_id))
+			for ctx, ctx_name in zip([ctx1, ctx2], ['ctx1.txt', 'ctx2.txt']):
+				f = open(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed', row_id, ctx_name), 'wb')
+				f.write(ctx)
+				f.close()
+
+
