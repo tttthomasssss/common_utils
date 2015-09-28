@@ -10,11 +10,14 @@ import os
 import string
 
 from bs4 import BeautifulSoup
-import numpy as np
+from discoutils import stanford_utils
+from gensim.models import Word2Vec
+from gensim.test.test_doc2vec import read_su_sentiment_rotten_tomatoes
 from scipy import sparse
 from sklearn.datasets import fetch_20newsgroups
 from sklearn.externals import joblib
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer, TfidfTransformer
+import numpy as np
 
 from corpus_hacks.aptemod import AptemodIndex
 from corpus_hacks.rcv1 import RCV1Index
@@ -1300,6 +1303,10 @@ def fetch_twitter_fyp_dataset_vectorized(dataset_path, dataset_name, use_tfidf=F
 	return (vectorized_labelled, labels, vectorized_unlabelled) if not wrap_in_list else [(vectorized_labelled, labels, vectorized_unlabelled)]
 
 
+def fetch_google_news_word2vec_300dim_vectors(dataset_path=os.path.join(paths.get_dataset_path(), 'google_news')):
+	return Word2Vec.load_word2vec_format(os.path.join(dataset_path, 'GoogleNews-vectors-negative300.bin'), binary=True)
+
+
 def fetch_stanford_sentiment_treebank_dataset(dataset_path=os.path.join(paths.get_dataset_path(), 'stanford_sentiment_treebank'),
 											  fine_grained=False, vectorisation='count', force_recreate_dataset=False,
 											  vectorisation_opts={'ngram_range': (1, 2), 'extraction_style': 'all', 'binarize': False,
@@ -1320,56 +1327,97 @@ def fetch_stanford_sentiment_treebank_dataset(dataset_path=os.path.join(paths.ge
 		clean_value = str(value).replace(' ', '').replace(',', '-').replace('(', '').replace(')', '').replace('[', '').replace(']', '').strip()
 		path = os.path.join(path, '_'.join([key, clean_value]))
 
-	if (not force_recreate_dataset and os.path.exists(os.path.join(path, 'X_train'))):
-		X_train = joblib.load(os.path.join(path, 'X_train'))
-		y_train = joblib.load(os.path.join(path, 'y_train'))
-		X_valid = joblib.load(os.path.join(path, 'X_valid'))
-		y_valid = joblib.load(os.path.join(path, 'y_valid'))
-		X_test = joblib.load(os.path.join(path, 'X_test'))
-		y_test = joblib.load(os.path.join(path, 'y_test'))
+	label_dict = collections.defaultdict(list)
+	sent_dict = collections.defaultdict(list)
+
+	phrases = read_su_sentiment_rotten_tomatoes(dirname=os.path.join(paths.get_dataset_path(), 'stanford_sentiment_treebank'))
+
+	for phrase in phrases:
+		if (phrase.split is not None and phrase.sentence_id is not None):
+			label_dict[phrase.split].append(_stanford_stb_fine_grained_label_mapping(phrase.sentiment))
+			sent_dict[phrase.split].append(phrase.words)
+
+	y_train = np.array(label_dict['train'])
+	y_valid = np.array(label_dict['dev'])
+	y_test = np.array(label_dict['test'])
+
+	return (sent_dict['train'], y_train, sent_dict['dev'], y_valid, sent_dict['test'], y_test)
+
+
+def _stanford_stb_fine_grained_label_mapping(sentiment_score):
+	if (sentiment_score <= 0.2):
+		return 0
+	elif (sentiment_score > 0.2 and sentiment_score <= 0.4):
+		return 1
+	elif (sentiment_score > 0.4 and sentiment_score <= 0.6):
+		return 2
+	elif (sentiment_score > 0.6 and sentiment_score <= 0.8):
+		return 3
+	elif (sentiment_score > 0.8):
+		return 4
+
+
+def fetch_scws_dataset(dataset_path=os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx'), dataset_option='raw'):
+
+	if (dataset_option == 'raw'):
+		sents = []
+		with open(os.path.join(dataset_path, 'ratings.txt'), mode='r') as raw_dataset:
+			for line in raw_dataset:
+				sents.append(line.strip())
+
+		return sents
+	elif (dataset_option == 'apt_preprocessed'):
+		sents = []
+		with open(os.path.join(dataset_path, 'apt_contexts_extracted', 'ratings.tsv'), mode='r') as apt_preprocessed:
+			for line in apt_preprocessed:
+				sents.append(line.strip())
+
+		return sents
 	else:
-		if (not os.path.exists(path)):
-			os.makedirs(path)
-	# TODO: It is not clear how phrases and sentences map together, hence re-creating the train/valid/test split is not possible
+		#if (os.path.exists(datset_path)):
+		#	pass
+		#else:
+		if (not os.path.exists(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed'))):
+			os.makedirs(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed'))
+		with open(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'ratings.txt'), 'rb') as raw_dataset, \
+			open(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed', 'words.csv'), 'wb') as csv_words, \
+			open(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed', 'words_incl_pos.csv'), 'wb') as csv_words_incl_pos:
 
-	print 'FINAL PATH:', path
+			csv_words_writer = csv.writer(csv_words)
+			csv_words_incl_pos_writer = csv.writer(csv_words_incl_pos)
 
+			# Preprocess
+			for line in raw_dataset:
+				parts = line.split('\t')
+				row_id = parts[0]
+				word1 = parts[1]
+				word1_incl_pos = '%s\\%s' % (word1, parts[2])
+				word2 = parts[3]
+				word2_incl_pos = '%s\\%s'  % (word2, parts[4])
+				ctx1 = parts[5].replace('<b>', '').replace('</b>', '').replace('</ b>', '')
+				ctx2 = parts[6].replace('<b>', '').replace('</b>', '').replace('</ b>', '')
+				avg_sim_rating = float(parts[7])
 
-def fetch_scws_dataset(datset_path=os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'apt_processed')):
+				words_incl_pos = [row_id, word1_incl_pos, word2_incl_pos, avg_sim_rating]
+				words = [row_id, word1, word2, avg_sim_rating]
 
-	#if (os.path.exists(datset_path)):
-	#	pass
-	#else:
-	with open(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'ratings.txt'), 'rb') as raw_dataset, \
-		open(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed', 'words.csv'), 'wb') as csv_words, \
-		open(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed', 'words_incl_pos.csv'), 'wb') as csv_words_incl_pos:
+				# Write Words CSV
+				csv_words_writer.writerow(words)
+				csv_words_incl_pos_writer.writerow(words_incl_pos)
 
-		csv_words_writer = csv.writer(csv_words)
-		csv_words_incl_pos_writer = csv.writer(csv_words_incl_pos)
+				# Write Sentences
+				os.makedirs(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed', row_id))
+				for ctx, ctx_name in zip([ctx1, ctx2], ['ctx1.txt', 'ctx2.txt']):
+					f = open(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed', row_id, ctx_name), 'wb')
+					f.write(ctx)
+					f.close()
 
-		for line in raw_dataset:
-			parts = line.split('\t')
-			row_id = parts[0]
-			word1 = parts[1]
-			word1_incl_pos = '%s\\%s' % (word1, parts[2])
-			word2 = parts[3]
-			word2_incl_pos = '%s\\%s'  % (word2, parts[4])
-			ctx1 = parts[5].replace('<b>', '').replace('</b>', '').replace('</ b>', '')
-			ctx2 = parts[6].replace('<b>', '').replace('</b>', '').replace('</ b>', '')
-			avg_sim_rating = float(parts[7])
-
-			words_incl_pos = [row_id, word1_incl_pos, word2_incl_pos, avg_sim_rating]
-			words = [row_id, word1, word2, avg_sim_rating]
-
-			# Write Words CSV
-			csv_words_writer.writerow(words)
-			csv_words_incl_pos_writer.writerow(words_incl_pos)
-
-			# Write Sentences
-			os.makedirs(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed', row_id))
-			for ctx, ctx_name in zip([ctx1, ctx2], ['ctx1.txt', 'ctx2.txt']):
-				f = open(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed', row_id, ctx_name), 'wb')
-				f.write(ctx)
-				f.close()
-
+			# Dependency Parse with Stanford Parser
+			for folder in os.listdir(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed')):
+				processed_path = os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed', folder)
+				parsed_path = os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'parsed', folder)
+				if (os.path.isdir(processed_path)):
+					if (not os.path.exists(parsed_path)):
+						os.makedirs(parsed_path)
+					stanford_utils.run_stanford_pipeline(processed_path, os.path.join(paths.get_base_path(), 'stanford-corenlp'), java_threads=4, filelistdir="")
 

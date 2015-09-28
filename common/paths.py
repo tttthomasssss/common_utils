@@ -6,27 +6,30 @@ PROJECT_PATH = os.path.dirname(os.path.dirname(__file__))
 
 __BASEPATH__ = {
 	'Thomas-Kobers-MacBook.local': os.path.expanduser('~/DevSandbox/InfiniteSandbox/tag-lab'),
-	'm011437.inf.susx.ac.uk': os.path.expanduser('~/DevSandbox/InfiniteSandbox/tag-lab')
+	'm011437.inf.susx.ac.uk': os.path.expanduser('~/DevSandbox/InfiniteSandbox/tag-lab'),
+	'disco': os.path.expanduser('~')
 }
 
 __DATASET_PATH__ = {
 	'Thomas-Kobers-MacBook.local': os.path.expanduser('~/DevSandbox/EpicDataShelf/tag-lab'),
-	'm011437.inf.susx.ac.uk': os.path.expanduser('~/DevSandbox/InfiniteSandbox/_datasets/')
+	'm011437.inf.susx.ac.uk': os.path.expanduser('~/DevSandbox/InfiniteSandbox/_datasets/'),
+	'disco': os.path.expanduser('~/_datasets')
 }
 
 __OUT_PATH__ = {
 	'Thomas-Kobers-MacBook.local': os.path.expanduser('~/DevSandbox/InfiniteSandbox/tag-lab/_results'),
-	'm011437.inf.susx.ac.uk': os.path.expanduser('~/DevSandbox/InfiniteSandbox/_results')
+	'm011437.inf.susx.ac.uk': os.path.expanduser('~/DevSandbox/InfiniteSandbox/_results'),
+	'disco': os.path.expanduser('~/_results')
 }
 
 
 def get_base_path():
-	return __BASEPATH__.get(socket.gethostname(), '/mnt/lustre/scratch/inf/thk22/code') # Fallback on lustre path on cluster
+	return __BASEPATH__.get(socket.gethostname(), '/lustre/scratch/inf/thk22/code') # Fallback on lustre path on cluster
 
 
 def get_dataset_path():
-	return __DATASET_PATH__.get(socket.gethostname(), '/mnt/lustre/scratch/inf/thk22/_datasets') # Fallback on lustre path on cluster
+	return __DATASET_PATH__.get(socket.gethostname(), '/lustre/scratch/inf/thk22/_datasets') # Fallback on lustre path on cluster
 
 
 def get_out_path():
-	return __OUT_PATH__.get(socket.gethostname(), '/mnt/lustre/scratch/inf/thk22/_results') # Fallback on lustre path on cluster
+	return __OUT_PATH__.get(socket.gethostname(), '/lustre/scratch/inf/thk22/_results') # Fallback on lustre path on cluster

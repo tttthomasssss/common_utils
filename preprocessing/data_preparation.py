@@ -88,6 +88,27 @@ def split_data_raw(dataset, train_data_idx, train_labels_idx, test_data_idx, tes
 	return (X_train, y_train, X_test, y_test, X_unlabelled)
 
 
+def _split_20newsgroups_train_dev_test(dataset, ratio, random_state):
+	X = dataset[0]
+	y = dataset[1]
+	X_test = dataset[2]
+	y_test = dataset[3]
+
+	split = StratifiedShuffleSplit(y, n_iter=1, test_size=ratio[1], random_state=random_state)
+
+	for train_idx, valid_idx in split:
+		X_train, X_valid = X[train_idx], X[valid_idx]
+		y_train, y_valid = y[train_idx], y[valid_idx]
+
+	return (X_train, y_train, X_valid, y_valid, X_test, y_test)
+
+
+def split_data_train_dev_test(dataset_name, dataset, ratio, random_state):
+	if (dataset_name == '20newsgroups'):
+		return _split_20newsgroups_train_dev_test(dataset, ratio, random_state)
+	else:
+		raise NotImplementedError('The Noes!, split for %s is not yet implemented!!!' % (dataset_name,))
+
 def split_data(dataset, train_data_idx, train_labels_idx, test_data_idx, test_labels_idx, unlabelled_data_idx, random_state):
 	X_train = dataset[train_data_idx]
 	y_train = dataset[train_labels_idx]

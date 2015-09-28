@@ -1,6 +1,8 @@
 setup.py
 algorithms/__init__.py
+algorithms/ensembles.py
 algorithms/feature_selection.py
+algorithms/imbalanced_dataset.py
 algorithms/instance_selection.py
 algorithms/semi_supervised.py
 classifiers/__init__.py
@@ -18,6 +20,10 @@ corpus_hacks/__init__.py
 corpus_hacks/aptemod.py
 corpus_hacks/method51.py
 corpus_hacks/rcv1.py
+datastructures/Dataset.py
+datastructures/__init__.py
+externals/__init__.py
+externals/seminb.py
 method51/__init__.py
 method51/model_adapter.py
 method51/model_stats.py
@@ -28,6 +34,11 @@ preprocessing/__init__.py
 preprocessing/data_preparation.py
 preprocessing/twokenize.py
 preprocessing/twormalize.py
+test/__init__.py
+test/bernoulli_sfe.py
+test/read_stst_test.py
+test/rennie_nb_test.py
+test/semi_supervised.py
 utils/__init__.py
 utils/path_utils.py
 utils/safe_sparse_ops.py

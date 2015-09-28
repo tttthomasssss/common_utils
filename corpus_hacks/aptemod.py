@@ -5,7 +5,7 @@ import glob
 import json
 import os
 import re
-import sgmllib
+#import sgmllib
 import sys
 
 
@@ -108,6 +108,7 @@ class AptemodIndex(object):
 	def country_list_for_doc_id(self, doc_id):
 		return self._doc_index[doc_id]['countries']
 
+"""
 class AptemodParser(sgmllib.SGMLParser):
 	'''Utility class to parse a SGML file and yield documents one at a time.'''
 	def __init__(self, verbose=0):
@@ -234,6 +235,7 @@ def create_index(dataset_path):
 	train_data.close()
 	test_data.close()
 	unlabelled_data.close()
+"""
 
 if (__name__ == '__main__'):
 	create_index(sys.argv[1] if len(sys.argv) > 1 else '/Volumes/LocalDataHD/thk22/DevSandbox/InfiniteSandbox/_datasets/aptemod/reuters21578')
