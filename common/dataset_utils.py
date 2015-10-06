@@ -23,6 +23,7 @@ from corpus_hacks.aptemod import AptemodIndex
 from corpus_hacks.rcv1 import RCV1Index
 
 from . import paths
+from utils import path_utils
 
 
 # TODO: WSD Dataset resource: http://www.cs.cmu.edu/~mfaruqui/suite.html
@@ -1320,28 +1321,46 @@ def fetch_stanford_sentiment_treebank_dataset(dataset_path=os.path.join(paths.ge
 	:return: A Dataset
 	'''
 
-	# Create sub_path out of options
-	fine_grained_subpath = '2_class' if not fine_grained else '5_class'
-	path = os.path.join(dataset_path, fine_grained_subpath)
-	for key, value in vectorisation_opts.iteritems():
-		clean_value = str(value).replace(' ', '').replace(',', '-').replace('(', '').replace(')', '').replace('[', '').replace(']', '').strip()
-		path = os.path.join(path, '_'.join([key, clean_value]))
+	if (path_utils.check_all_exists(dataset_path, ['train_data', 'valid_data', 'test_data', 'y_train', 'y_vaild', 'y_test'])):
+		y_train = joblib.load(os.path.join(dataset_path, 'y_train'))
+		y_valid = joblib.load(os.path.join(dataset_path, 'y_valid'))
+		y_test = joblib.load(os.path.join(dataset_path, 'y_test'))
+		train_data = joblib.load(os.path.join(dataset_path, 'train_data'))
+		valid_data = joblib.load(os.path.join(dataset_path, 'valid_data'))
+		test_data = joblib.load(os.path.join(dataset_path, 'test_data'))
+	else:
+		# Create sub_path out of options
+		fine_grained_subpath = '2_class' if not fine_grained else '5_class'
+		path = os.path.join(dataset_path, fine_grained_subpath)
+		for key, value in vectorisation_opts.iteritems():
+			clean_value = str(value).replace(' ', '').replace(',', '-').replace('(', '').replace(')', '').replace('[', '').replace(']', '').strip()
+			path = os.path.join(path, '_'.join([key, clean_value]))
 
-	label_dict = collections.defaultdict(list)
-	sent_dict = collections.defaultdict(list)
+		label_dict = collections.defaultdict(list)
+		sent_dict = collections.defaultdict(list)
 
-	phrases = read_su_sentiment_rotten_tomatoes(dirname=os.path.join(paths.get_dataset_path(), 'stanford_sentiment_treebank'))
+		phrases = read_su_sentiment_rotten_tomatoes(dirname=os.path.join(paths.get_dataset_path(), 'stanford_sentiment_treebank'))
 
-	for phrase in phrases:
-		if (phrase.split is not None and phrase.sentence_id is not None):
-			label_dict[phrase.split].append(_stanford_stb_fine_grained_label_mapping(phrase.sentiment))
-			sent_dict[phrase.split].append(phrase.words)
+		for phrase in phrases:
+			if (phrase.split is not None and phrase.sentence_id is not None):
+				label_dict[phrase.split].append(_stanford_stb_fine_grained_label_mapping(phrase.sentiment))
+				sent_dict[phrase.split].append(phrase.words)
 
-	y_train = np.array(label_dict['train'])
-	y_valid = np.array(label_dict['dev'])
-	y_test = np.array(label_dict['test'])
+		y_train = np.array(label_dict['train'])
+		y_valid = np.array(label_dict['dev'])
+		y_test = np.array(label_dict['test'])
+		train_data = sent_dict['train']
+		valid_data = sent_dict['dev']
+		test_data = sent_dict['test']
 
-	return (sent_dict['train'], y_train, sent_dict['dev'], y_valid, sent_dict['test'], y_test)
+		joblib.dump(y_train, os.path.join(dataset_path, 'y_train'))
+		joblib.dump(y_valid, os.path.join(dataset_path, 'y_valid'))
+		joblib.dump(y_test, os.path.join(dataset_path, 'y_test'))
+		joblib.dump(train_data, os.path.join(dataset_path, 'train_data'))
+		joblib.dump(valid_data, os.path.join(dataset_path, 'valid_data'))
+		joblib.dump(test_data, os.path.join(dataset_path, 'test_data'))
+
+	return (train_data, y_train, valid_data, y_valid, test_data, y_test)
 
 
 def _stanford_stb_fine_grained_label_mapping(sentiment_score):
