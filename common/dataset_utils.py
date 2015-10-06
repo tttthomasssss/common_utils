@@ -1321,7 +1321,7 @@ def fetch_stanford_sentiment_treebank_dataset(dataset_path=os.path.join(paths.ge
 	:return: A Dataset
 	'''
 
-	if (path_utils.check_all_exists(dataset_path, ['train_data', 'valid_data', 'test_data', 'y_train', 'y_vaild', 'y_test'])):
+	if (path_utils.check_all_exist(dataset_path, ['train_data', 'valid_data', 'test_data', 'y_train', 'y_valid', 'y_test'])):
 		y_train = joblib.load(os.path.join(dataset_path, 'y_train'))
 		y_valid = joblib.load(os.path.join(dataset_path, 'y_valid'))
 		y_test = joblib.load(os.path.join(dataset_path, 'y_test'))
