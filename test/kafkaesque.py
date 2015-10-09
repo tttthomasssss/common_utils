@@ -180,17 +180,21 @@ def kafka_most_similar():
 def wikipedia_iterator():
 	from corpus_readers.wikipedia import WikipediaReader
 
+	binary = [True, False]
 	weightings = ['ppmi', 'sppmi', 'pnpmi', 'plmi']
 	window_sizes = [3, 5, 10]
 	min_frequencies = [20, 50, 100]
 
 	with open(os.path.join(paths.get_dataset_path(), 'wikipedia', 'wikipedia_utf8_filtered_20pageviews.csv')) as csv_file:
-		csv_reader = csv.reader(csv_file)
-		vec = VSMVectorizer(window_size=5, use_memmap=True, memmap_path=os.path.join(paths.get_dataset_path(), 'wikipedia'))
+		#csv_reader = csv.reader(csv_file)
+		#vec = VSMVectorizer(window_size=5, use_memmap=True, memmap_path=os.path.join(paths.get_dataset_path(), 'wikipedia'))
+		vec = VSMVectorizer(window_size=5)
 
-		M_ppmi = vec.fit_transform(csv_reader)
+		M_ppmi = vec.fit_transform(csv_file)
 
-		joblib.dump(M_ppmi, os.path.join(paths.get_dataset_path(), 'wikipedia', 'wikipedia_ppmi_size-5'))
+		print('SIZE: %r' % (M_ppmi.shape,))
+
+		#joblib.dump(M_ppmi, os.path.join(paths.get_dataset_path(), 'wikipedia', 'wikipedia_ppmi_size-5'))
 
 	'''
 	r = WikipediaReader(os.path.join(paths.get_dataset_path(), 'wikipedia', 'wikipedia_utf8_filtered_20pageviews.csv'))
@@ -208,5 +212,5 @@ def wikipedia_iterator():
 if (__name__ == '__main__'):
 	#tokenize_kafka()
 	#kafka_most_similar()
-	#wikipedia_iterator()
-	vectorize_kafka()
+	wikipedia_iterator()
+	#vectorize_kafka()

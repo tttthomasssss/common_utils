@@ -1,5 +1,4 @@
 __author__ = 'thomas'
-from tempfile import mkstemp
 import array
 import os
 
@@ -8,7 +7,13 @@ from sklearn.base import BaseEstimator
 from sklearn.feature_extraction.text import VectorizerMixin
 import numpy as np
 
-
+# TODO: SVD based on http://www.aclweb.org/anthology/Q/Q15/Q15-1016.pdf, esp. chapter 7, practical recommendations
+	# Context Window Weighting
+	# Subsampling
+	# Context Distribution Smoothing
+	# Normalisation
+	# SVD
+	# Hellinger PCA
 class VSMVectorizer(BaseEstimator, VectorizerMixin):
 	def __init__(self, window_size, weighting='ppmi', min_frequency=0, lowercase=True, stop_words=None, encoding='utf-8',
 				 max_features=None, preprocessor=None, tokenizer=None, analyzer='word', binary=False, sppmi_shift=1,
@@ -60,8 +65,7 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		w = array.array('i')
 
 		# Tempfile to hold _all_ tokens (to speed up the sliding window process later on)
-		#f, _ = mkstemp()
-		tokens = []#np.memmap(f, dtype=np.str, mode='w+')
+		tokens = []
 
 		# Extract Vocabulary
 		for doc in raw_documents:
@@ -127,10 +131,6 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		if (self.binary):
 			self.M_ = np.minimum(self.M, 1)
 
-	def _joint_probability(self):
-		P_w_given_c = (self.M_ / self.M_.sum(axis=1)).A if not self.use_memmap else self.M_ / self.M_.sum(axis=1)
-		return P_w_given_c * self.p_w_.reshape(-1, 1)
-
 	def _apply_weight_option(self, pmi, P_w_c, p_c, idx, row):
 		if (self.weighting == 'ppmi'):
 			return pmi
@@ -163,6 +163,8 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 
 			self.T_[idx, row] = np.maximum(0, tpmi)
 
+		return self.T_
+
 	def _transform(self):
 		self.T_ = sparse.lil_matrix(self.M_.shape, dtype=np.float64)
 
@@ -184,6 +186,8 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 
 			self.T_[idx, row] = np.maximum(0, tpmi)
 
+		return self.T_.tocsr()
+
 	def fit(self, raw_documents, y=None):
 		self._extract_vocabulary(raw_documents)
 
@@ -203,13 +207,9 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 	def transform(self, raw_documents):
 		# Apply the weighting transformation
 		if (self.use_memmap):
-			self._transform_memmap()
+			return sparse.csr_matrix(self._transform_memmap())
 		else:
-			self._transform()
-
-		self.T_ = sparse.csr_matrix(self.T_)
-
-		return self.T_
+			return self._transform()
 
 	def fit_transform(self, raw_documents, y=None):
 		self.fit(raw_documents)
