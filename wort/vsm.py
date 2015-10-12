@@ -11,9 +11,7 @@ import numpy as np
 # TODO: SVD based on http://www.aclweb.org/anthology/Q/Q15/Q15-1016.pdf, esp. chapter 7, practical recommendations
 	# Context Window Weighting
 	# Subsampling
-	# Context Distribution Smoothing
 	# Normalisation
-	# SVD
 	# Hellinger PCA
 class VSMVectorizer(BaseEstimator, VectorizerMixin):
 	def __init__(self, window_size, weighting='ppmi', min_frequency=0, lowercase=True, stop_words=None, encoding='utf-8',
