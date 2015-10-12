@@ -5,6 +5,7 @@ import os
 from scipy import sparse
 from sklearn.base import BaseEstimator
 from sklearn.feature_extraction.text import VectorizerMixin
+from sparsesvd import sparsesvd
 import numpy as np
 
 # TODO: SVD based on http://www.aclweb.org/anthology/Q/Q15/Q15-1016.pdf, esp. chapter 7, practical recommendations
@@ -18,7 +19,8 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 	def __init__(self, window_size, weighting='ppmi', min_frequency=0, lowercase=True, stop_words=None, encoding='utf-8',
 				 max_features=None, preprocessor=None, tokenizer=None, analyzer='word', binary=False, sppmi_shift=1,
 				 token_pattern=r'(?u)\b\w\w+\b', decode_error='strict', strip_accents=None, input='content',
-				 ngram_range=(1, 1), use_memmap=False, memmap_path=None):
+				 ngram_range=(1, 1), cds=1, svd=None, svd_eig_weighting=1, add_context_vectors=True,
+				 use_memmap=False, memmap_path=None):
 
 		self.window_size = window_size
 		self.weighting = weighting
@@ -39,6 +41,10 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		self.memmap_path = memmap_path
 		self.input = input
 		self.ngram_range = ngram_range
+		self.cds = cds
+		self.svd = svd
+		self.svd_eig_weighting = svd_eig_weighting
+		self.add_context_vectors = add_context_vectors
 
 		self.inverted_index_ = {}
 		self.index_ = {}
@@ -80,7 +86,7 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 					w.append(1)
 
 		# Create Index
-		self.index_ = dict(enumerate(self.inverted_index_.values()))
+		self.index_ = dict(enumerate(self.inverted_index_.keys()))
 		vocab_count = len(self.index_.keys())
 
 		W = np.array(w, dtype=np.uint32)
@@ -139,7 +145,7 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		elif (self.weighting == 'pnpmi'):
 			return (P_w_c[idx, row] * (1 / -(np.log(p_c)))) * pmi
 		elif (self.weighting == 'sppmi'):
-			return pmi - np.lot(self.sppmi_shift)
+			return pmi - np.log(self.sppmi_shift)
 
 	def _transform_memmap(self):
 		self.T_ = np.memmap(os.path.join(self.memmap_path, '%s.dat' % (self.weighting.upper(),)), dtype=np.uint32, mode='w+', shape=(self.vocab_count_, self.vocab_count_))
@@ -175,8 +181,8 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		for idx in self.index_.keys():
 			row = (self.M_[idx, :] > 0).indices
 
-			# Marginals for context
-			p_c = self.p_w_[row]
+			# Marginals for context (with optional context distribution smoothing)
+			p_c = self.p_w_[row] ** self.cds
 
 			# PMI
 			pmi = np.log(P_w_c[idx, row]) - (np.log(self.p_w_[idx]) + np.log(p_c))
@@ -186,7 +192,26 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 
 			self.T_[idx, row] = np.maximum(0, tpmi)
 
-		return self.T_.tocsr()
+		# CSR!!!
+		self.T_ = self.T_.tocsr()
+
+		# Apply SVD
+		if (self.svd is not None):
+			Ut, S, Vt = sparsesvd(self.T_.tocsc(), self.svd)
+
+			# Perform Context Weighting
+			S = sparse.csr_matrix(np.diag(S ** self.svd_eig_weighting))
+
+			W = sparse.csr_matrix(Ut.T).dot(S)
+			V = sparse.csr_matrix(Vt.T).dot(S)
+
+			# Add context vectors
+			if (self.add_context_vectors):
+				self.T_ = W + V
+			else:
+				self.T_ = W
+
+		return self.T_
 
 	def fit(self, raw_documents, y=None):
 		self._extract_vocabulary(raw_documents)
