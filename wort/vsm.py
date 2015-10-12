@@ -159,7 +159,7 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 			row = np.where(self.M_[idx, :] > 0)[0]
 
 			# Marginals for context
-			p_c = self.p_w_[row]
+			p_c = self.p_w_[row] ** self.cds
 
 			# PMI
 			pmi = np.log(P_w_c[idx, row]) - (np.log(self.p_w_[idx]) + np.log(p_c))
