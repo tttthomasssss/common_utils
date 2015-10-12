@@ -77,7 +77,7 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 				tokens.append(feature)
 				if (feature in self.inverted_index_):
 					idx = self.inverted_index_[feature]
-					w[idx] += 1
+					w[idx] += 1 # TODO: Do we need the bloody counts????
 				else:
 					vocab_count += 1
 					self.inverted_index_[feature] = vocab_count
