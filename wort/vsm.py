@@ -13,6 +13,8 @@ import numpy as np
 	# Subsampling
 	# Normalisation
 	# Hellinger PCA
+	# NMF as an alternative to SVD
+	# Support min_df and max_df
 class VSMVectorizer(BaseEstimator, VectorizerMixin):
 	def __init__(self, window_size, weighting='ppmi', min_frequency=0, lowercase=True, stop_words=None, encoding='utf-8',
 				 max_features=None, preprocessor=None, tokenizer=None, analyzer='word', binary=False, sppmi_shift=1,
@@ -40,7 +42,7 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		self.input = input
 		self.ngram_range = ngram_range
 		self.cds = cds
-		self.svd = svd
+		self.svd_dims = svd
 		self.svd_eig_weighting = svd_eig_weighting
 		self.add_context_vectors = add_context_vectors
 
@@ -58,55 +60,76 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		for i in idx:
 			item = self.index_[i]
 			del self.inverted_index_[item]
-			del self.index_[i]
+			#del self.index_[i]
 
 		return W
 
 	def _extract_vocabulary(self, raw_documents):
 		analyse = self.build_analyzer()
 
-		vocab_count = -1
+		n_vocab = -1
 		w = array.array('i')
 
 		# Tempfile to hold _all_ tokens (to speed up the sliding window process later on)
-		tokens = []
+		#tokens = [] too memory intensive
 
 		# Extract Vocabulary
+		# todo gensim corpus/Dictionary object or a sklearn.DictVectorizer(???)
+
+		buffer = []
+
+
 		for doc in raw_documents:
 			for feature in analyse(doc):
-				tokens.append(feature)
+				'''
+				idx = self.inverted_index_.get(feature, n_vocab + 1)
+
+				# Build vocab
+				if (idx > n_vocab):
+					n_vocab += 1
+					self.inverted_index_[feature] = n_vocab
+					w.append(1)
+				else:
+					w[idx] += 1
+				'''
+
 				if (feature in self.inverted_index_):
 					idx = self.inverted_index_[feature]
 					w[idx] += 1 # TODO: Do we need the bloody counts????
 				else:
-					vocab_count += 1
-					self.inverted_index_[feature] = vocab_count
+					n_vocab += 1
+					self.inverted_index_[feature] = n_vocab
 					w.append(1)
 
+
+		# Vocab was used for indexing (hence, started at 0 for the first item (NOT init!)), so has to be incremented by 1
+		# to reflect the true vocab count
+		n_vocab += 1
 		# Create Index
-		self.index_ = dict(enumerate(self.inverted_index_.keys()))
-		vocab_count = len(self.index_.keys())
+		print('MANUAL VOCAB COUNT: {}'.format(n_vocab))
+		print('VOCAB COUNT: {}'.format(len(self.inverted_index_.keys())))
+		#self.index_ = dict(enumerate(self.inverted_index_.keys()))
+		#n_vocab = len(self.index_.keys())
 
 		W = np.array(w, dtype=np.uint32)
 
+		# todo gensim.Dictionary.filter_extremes (???)
 		# Filter for Frequency
 		if (not self.binary and self.min_frequency > 0):
 			idx = np.where(W < self.min_frequency)[0]
 			W = self._delete_from_vocab(W, idx)
 
-			vocab_count -= len(idx)
+			n_vocab -= len(idx)
 
 		# Max Features Filter
-		if (self.max_features is not None and self.max_features < vocab_count):
+		if (self.max_features is not None and self.max_features < n_vocab):
 			idx = np.argpartition(-W)[self.max_features + 1:]
 			W = self._delete_from_vocab(W, idx)
 
-			vocab_count -= len(idx)
+			n_vocab -= len(idx)
 
 		self.p_w_ = W / W.sum()
-		self.vocab_count_ = vocab_count
-		self.temp_tokens_store_ = np.array(list(map(lambda t: self.inverted_index_[t], tokens)))
-		del tokens
+		self.vocab_count_ = n_vocab
 
 	def _construct_cooccurrence_matrix_mmap(self):
 		self.M_ = np.memmap(os.path.join(self.memmap_path, 'M.dat'), dtype=np.uint32, mode='w+', shape=(self.vocab_count_, self.vocab_count_))
@@ -124,15 +147,18 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 	def _construct_cooccurrence_matrix(self):
 		self.M_ = sparse.dok_matrix((self.vocab_count_, self.vocab_count_), dtype=np.uint32)
 
+
+
+		''' To mem heavy
 		for idx in self.index_.keys():
 			occurrences = np.where(self.temp_tokens_store_==idx)[0]
 			for occ_idx in occurrences:
 				cooccurrence_window = np.concatenate((self.temp_tokens_store_[occ_idx - self.window_size:occ_idx], self.temp_tokens_store_[occ_idx + 1:occ_idx + 1 + self.window_size]))
 
 				self.M_[idx, cooccurrence_window] += 1
-
+		'''
 	def _binarise(self):
-		if (self.binary):
+		if (self.binary): # todo move outside function
 			self.M_ = np.minimum(self.M, 1)
 
 	def _apply_weight_option(self, pmi, P_w_c, p_c, idx, row):
@@ -186,6 +212,7 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 			pmi = np.log(P_w_c[idx, row]) - (np.log(self.p_w_[idx]) + np.log(p_c))
 
 			# Apply PMI variant (e.g. PPMI, SPPMI, PLMI or PNPMI)
+			# todo discoutils has an OK-ish PPMI implementation
 			tpmi = self._apply_weight_option(pmi, self.weighting, p_c, idx, row)
 
 			self.T_[idx, row] = np.maximum(0, tpmi)
@@ -194,8 +221,8 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		self.T_ = self.T_.tocsr()
 
 		# Apply SVD
-		if (self.svd is not None):
-			Ut, S, Vt = sparsesvd(self.T_.tocsc(), self.svd)
+		if self.svd_dims:
+			Ut, S, Vt = sparsesvd(self.T_.tocsc(), self.svd_dims)
 
 			# Perform Context Weighting
 			S = sparse.csr_matrix(np.diag(S ** self.svd_eig_weighting))
@@ -223,11 +250,12 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		self.temp_tokens_store_ = None
 
 		# Apply Binarisation
-		self._binarise()
+		self._binarise() # todo make optional
 
 		return self
 
 	def transform(self, raw_documents):
+		# todo move to a different class or rename?
 		# Apply the weighting transformation
 		if (self.use_memmap):
 			return sparse.csr_matrix(self._transform_memmap())
