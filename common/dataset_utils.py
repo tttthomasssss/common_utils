@@ -5,6 +5,7 @@ import collections
 import csv
 import json
 import glob
+import gzip
 import pickle
 import os
 import string
@@ -24,6 +25,7 @@ from corpus_hacks.rcv1 import RCV1Index
 
 from . import paths
 from utils import path_utils
+from utils import vector_utils
 
 
 # TODO: WSD Dataset resource: http://www.cs.cmu.edu/~mfaruqui/suite.html
@@ -1374,6 +1376,61 @@ def _stanford_stb_fine_grained_label_mapping(sentiment_score):
 		return 3
 	elif (sentiment_score > 0.8):
 		return 4
+
+
+def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'cached_vectors'), dep_order=2, normalised=True):
+	fname_1 = '1.cached_ctx_vecs-{}{}.json.gz'.format(dep_order, '-norm' if normalised else '')
+	fname_2 = '2.cached_ctx_vecs-{}{}.json.gz'.format(dep_order, '-norm' if normalised else '')
+	subpath = 'wiki_lc_{}{}'.format(dep_order, '_norm' if normalised else '')
+	if (os.path.exists(os.path.join(dataset_path, subpath, str(example_id), fname_1)) and os.path.exists(os.path.join(dataset_path, subpath, str(example_id), fname_2))):
+		with gzip.open(os.path.join(dataset_path, subpath, str(example_id), fname_1), 'rt') as vec_cache:
+			vectors_1 = json.loads(vec_cache.read())
+
+		with gzip.open(os.path.join(dataset_path, subpath, str(example_id), fname_2), 'rt') as vec_cache:
+			vectors_2 = json.loads(vec_cache.read())
+	else:
+		target_ctx_1 = []
+		target_ctx_2 = []
+		target_ctx_path = os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'extracted_contexts', str(example_id))
+		with open(os.path.join(target_ctx_path, '1.txt'), 'r') as f_ctx_1, open(os.path.join(target_ctx_path, '2.txt'), 'r') as f_ctx_2:
+			ctx_1 = f_ctx_1.read().strip().split('\t')[1]
+			ctx_2 = f_ctx_2.read().strip().split('\t')[1]
+
+			for ctx, target_ctx in zip([ctx_1, ctx_2], [target_ctx_1, target_ctx_2]):
+				for c in ctx.split(','):
+					word, rel = c.split('_')
+
+					target_ctx.append((word, rel))
+
+		# Extract target & context vectors
+		target_words_1 = [t[0] for t in target_ctx_1]
+		target_words_2 = [t[0] for t in target_ctx_2]
+
+		vector_in_file = 'wikipedia_lc_{}{}_vectors.tsv.gz'.format(dep_order, '_norm' if normalised else '')
+
+		# Cache CTX 1
+		vectors_1 = vector_utils.load_csv_vectors(vector_in_file, words=target_words_1, out_prefix='\t', mod_logging_freq=3000)
+
+		out_path = os.path.join(dataset_path, subpath, str(example_id))
+
+		if (not os.path.exists(out_path)):
+			os.makedirs(out_path)
+
+			with gzip.open(os.path.join(out_path, fname_1), 'wt') as vec_dump:
+				vec_dump.write(json.dumps(vectors_1))
+
+		# Cache CTX 2
+		vectors_2 = vector_utils.load_csv_vectors(vector_in_file, words=target_words_2, out_prefix='\t', mod_logging_freq=3000)
+
+		out_path = os.path.join(dataset_path, subpath, str(example_id))
+
+		if (not os.path.exists(out_path)):
+			os.makedirs(out_path)
+
+			with gzip.open(os.path.join(out_path, fname_2), 'wt') as vec_dump:
+				vec_dump.write(json.dumps(vectors_2))
+
+	return (vectors_1, vectors_2)
 
 
 def fetch_scws_dataset(dataset_path=os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx'), dataset_option='raw'):
