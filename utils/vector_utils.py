@@ -13,6 +13,32 @@ def open_file(filename, mode='r', encoding='utf-8'):
 		return open(filename, mode, encoding=encoding)
 
 
+def apply_offset_path(path, offset):
+
+	if (path.startswith(':')): # EPSILON
+		offset_path = offset + path
+	else: # TODO: What to do with invalid paths?
+		head, *tail = path.split('\xbb')
+
+		if ('_{}'.format(head) == offset or '_{}'.format(offset) == head):
+			offset_path = tail
+		else:
+			offset_path = '\xbb'.join([offset, path])
+
+	return offset_path
+
+def create_offset_vector(vector, offset_path):
+	# Translate from my notation to Dave's notation
+	if (offset_path.startswith('!')):
+		offset_path = '_' + offset_path[1:]
+
+	offset_vector = {}
+
+	for feat in vector.keys():
+		offset_vector[apply_offset_path(feat, offset_path)] = vector[feat]
+
+	return offset_vector
+
 def find_vector_indices(in_file, words, out_prefix, mod_logging_freq=10000):
 	vector_index = {}
 	print ('Loading vectors from: {}'.format(in_file))

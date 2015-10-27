@@ -1393,8 +1393,12 @@ def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths
 		target_ctx_2 = []
 		target_ctx_path = os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'extracted_contexts', str(example_id))
 		with open(os.path.join(target_ctx_path, '1.txt'), 'r') as f_ctx_1, open(os.path.join(target_ctx_path, '2.txt'), 'r') as f_ctx_2:
-			ctx_1 = f_ctx_1.read().strip().split('\t')[1]
-			ctx_2 = f_ctx_2.read().strip().split('\t')[1]
+			extracted_ctx_1 = f_ctx_1.read().strip()
+			extracted_ctx_2 = f_ctx_2.read().strip()
+			ctx_1 = extracted_ctx_1.split('\t')[1]
+			ctx_2 = extracted_ctx_2.split('\t')[1]
+			target_word_1 = extracted_ctx_1.strip().split('\t')[0].lower()
+			target_word_2 = extracted_ctx_2.split('\t')[0].lower()
 
 			for ctx, target_ctx in zip([ctx_1, ctx_2], [target_ctx_1, target_ctx_2]):
 				for c in ctx.split(','):
@@ -1405,6 +1409,12 @@ def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths
 		# Extract target & context vectors
 		target_words_1 = [t[0] for t in target_ctx_1]
 		target_words_2 = [t[0] for t in target_ctx_2]
+
+		if (target_word_1 not in target_words_1):
+			target_words_1.append(target_word_1)
+
+		if (target_word_2 not in target_words_2):
+			target_words_2.append(target_word_2)
 
 		vector_in_file = 'wikipedia_lc_{}{}_vectors.tsv.gz'.format(dep_order, '_norm' if normalised else '')
 
