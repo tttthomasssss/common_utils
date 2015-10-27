@@ -45,6 +45,7 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		self.svd_dims = svd
 		self.svd_eig_weighting = svd_eig_weighting
 		self.add_context_vectors = add_context_vectors
+		self.analyser_fn_ = None
 
 		self.inverted_index_ = {}
 		self.index_ = {}
@@ -65,7 +66,7 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		return W
 
 	def _extract_vocabulary(self, raw_documents):
-		analyse = self.build_analyzer()
+		self.analyser_fn_ = self.build_analyzer()
 
 		n_vocab = -1
 		w = array.array('i')
@@ -76,12 +77,18 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		# Extract Vocabulary
 		# todo gensim corpus/Dictionary object or a sklearn.DictVectorizer(???)
 
-		buffer = []
-
+		# Incrementally construct coo matrix (see http://www.stefanoscerra.it)
+		rows = array.array('i')
+		cols = array.array('i')
+		data = array.array('i')
 
 		for doc in raw_documents:
-			for feature in analyse(doc):
-				'''
+
+			buffer = array.array('i')
+
+			# Collect vocabulary
+			for feature in self.analyser_fn_(doc):
+				# Single pass
 				idx = self.inverted_index_.get(feature, n_vocab + 1)
 
 				# Build vocab
@@ -91,8 +98,30 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 					w.append(1)
 				else:
 					w[idx] += 1
-				'''
 
+
+		for doc in raw_documents:
+			buffer = array.array('i')
+			for feature in self.analyser_fn_(doc):
+				buffer.append(self.inverted_index_[feature])
+
+			# Track co-occurrences
+			l = len(buffer)
+			for i in range(l):
+				# Backward co-occurrences
+				for j in range(max(i-self.window_size, 0), i):
+					rows.append(buffer[i])
+					cols.append(buffer[j])
+					data.append(1)
+
+				# Forward co-occurrences
+				for j in range(i+1, min(i + self.window_size + 1, l)):
+					rows.append(buffer[i])
+					cols.append(buffer[j])
+					data.append(1)
+
+				'''
+				# Double pass
 				if (feature in self.inverted_index_):
 					idx = self.inverted_index_[feature]
 					w[idx] += 1 # TODO: Do we need the bloody counts????
@@ -100,11 +129,21 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 					n_vocab += 1
 					self.inverted_index_[feature] = n_vocab
 					w.append(1)
-
-
+				'''
 		# Vocab was used for indexing (hence, started at 0 for the first item (NOT init!)), so has to be incremented by 1
 		# to reflect the true vocab count
 		n_vocab += 1
+
+		data = np.array(data, dtype=np.uint32, copy=False)
+		rows = np.array(rows, dtype=np.uint32, copy=False)
+		cols = np.array(cols, dtype=np.uint32, copy=False)
+
+		self.index_ = dict(zip(self.inverted_index_.values(), self.inverted_index_.keys()))
+
+		self.M_ = sparse.coo_matrix((data, (rows, cols)))
+
+		print(self.M_.A)
+		print(self.inverted_index_)
 		# Create Index
 		print('MANUAL VOCAB COUNT: {}'.format(n_vocab))
 		print('VOCAB COUNT: {}'.format(len(self.inverted_index_.keys())))
@@ -117,6 +156,34 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		# Filter for Frequency
 		if (not self.binary and self.min_frequency > 0):
 			idx = np.where(W < self.min_frequency)[0]
+
+			for i in idx:
+				# Handle row indices
+				row_idx = np.where(rows==i)
+
+				row_idx_gt = np.where(rows>i)
+				rows[row_idx_gt] -= 1
+
+				rows = np.delete(rows, row_idx)
+				cols = np.delete(cols, row_idx)
+				data = np.delete(data, row_idx)
+
+				cols = np.delete(cols, col_idx)
+				data = np.delete(data, row_idx) # As there's all ones in the
+
+				# Handle col indices
+				col_idx = np.where(cols==i)
+
+				col_idx_gt = np.where(cols>i)
+				cols[col_idx_gt] -= 1
+
+				rows = np.delete(rows, col_idx)
+				cols = np.delete(cols, col_idx)
+				data = np.delete(data, col_idx)
+
+				# Handle vocabulary
+
+
 			W = self._delete_from_vocab(W, idx)
 
 			n_vocab -= len(idx)
@@ -144,9 +211,11 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 
 		self.M_.flush()
 
-	def _construct_cooccurrence_matrix(self):
+	def _construct_cooccurrence_matrix(self, raw_documents):
 		self.M_ = sparse.dok_matrix((self.vocab_count_, self.vocab_count_), dtype=np.uint32)
 
+		#for doc in raw_documents:
+		#	for feature in self.analyser_fn_(doc):
 
 
 		''' To mem heavy
@@ -245,7 +314,7 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		if (self.use_memmap):
 			self._construct_cooccurrence_matrix_mmap()
 		else:
-			self._construct_cooccurrence_matrix()
+			self._construct_cooccurrence_matrix(raw_documents)
 
 		self.temp_tokens_store_ = None
 
