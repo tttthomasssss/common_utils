@@ -15,6 +15,9 @@ import numpy as np
 	# Hellinger PCA
 	# NMF as an alternative to SVD
 	# Support min_df and max_df
+	# Proper Logging would be nice
+	# Optimise the shizzle-whizzle
+	# Remove memmap? properly support it?
 class VSMVectorizer(BaseEstimator, VectorizerMixin):
 	def __init__(self, window_size, weighting='ppmi', min_frequency=0, lowercase=True, stop_words=None, encoding='utf-8',
 				 max_features=None, preprocessor=None, tokenizer=None, analyzer='word', binary=False, sppmi_shift=1,
@@ -45,13 +48,11 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		self.svd_dims = svd
 		self.svd_eig_weighting = svd_eig_weighting
 		self.add_context_vectors = add_context_vectors
-		self.analyser_fn_ = None
 
 		self.inverted_index_ = {}
 		self.index_ = {}
 		self.p_w_ = None
 		self.vocab_count_ = 0
-		self.temp_tokens_store_ = None
 		self.M_ = None
 		self.T_ = None
 
@@ -61,34 +62,20 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		for i in idx:
 			item = self.index_[i]
 			del self.inverted_index_[item]
-			#del self.index_[i]
+			del self.index_[i]
 
 		return W
 
-	def _extract_vocabulary(self, raw_documents):
-		self.analyser_fn_ = self.build_analyzer()
+	def _construct_cooccurrence_matrix(self, raw_documents):
+		analyser = self.build_analyzer()
 
 		n_vocab = -1
 		w = array.array('i')
 
-		# Tempfile to hold _all_ tokens (to speed up the sliding window process later on)
-		#tokens = [] too memory intensive
-
-		# Extract Vocabulary
-		# todo gensim corpus/Dictionary object or a sklearn.DictVectorizer(???)
-
-		# Incrementally construct coo matrix (see http://www.stefanoscerra.it)
-		rows = array.array('i')
-		cols = array.array('i')
-		data = array.array('i')
-
+		# Extract vocabulary
+		print ('Extracting vocabulary...')
 		for doc in raw_documents:
-
-			buffer = array.array('i')
-
-			# Collect vocabulary
-			for feature in self.analyser_fn_(doc):
-				# Single pass
+			for feature in analyser(doc):
 				idx = self.inverted_index_.get(feature, n_vocab + 1)
 
 				# Build vocab
@@ -99,11 +86,44 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 				else:
 					w[idx] += 1
 
+		# Vocab was used for indexing (hence, started at 0 for the first item (NOT init!)), so has to be incremented by 1
+		# to reflect the true vocab count
+		n_vocab += 1
+
+		W = np.array(w, dtype=np.uint32)
+		self.index_ = dict(zip(self.inverted_index_.values(), self.inverted_index_.keys()))
+
+		print('Filtering extremes...')
+		# Filter extremes
+		if (not self.binary and self.min_frequency > 0):
+			idx = np.where(W < self.min_frequency)[0]
+			W = self._delete_from_vocab(W, idx)
+
+			n_vocab -= len(idx)
+
+		# Max Features Filter
+		if (self.max_features is not None and self.max_features < n_vocab):
+			idx = np.argpartition(-W)[self.max_features + 1:]
+			W = self._delete_from_vocab(W, idx)
+
+			n_vocab -= len(idx)
+
+		self.p_w_ = W / W.sum()
+		self.vocab_count_ = n_vocab
+		self.inverted_index_ = dict(zip(self.inverted_index_.keys(), range(n_vocab)))
+
+		print('Constructing co-occurrence matrix...')
+		# Incrementally construct coo matrix (see http://www.stefanoscerra.it)
+		# This can be parallelised (inverted_index is shared and immutable and the rest is just a matrix)
+		rows = array.array('i')
+		cols = array.array('i')
+		data = array.array('i')
 
 		for doc in raw_documents:
 			buffer = array.array('i')
-			for feature in self.analyser_fn_(doc):
-				buffer.append(self.inverted_index_[feature])
+			for feature in analyser(doc):
+				if (feature in self.inverted_index_):
+					buffer.append(self.inverted_index_[feature])
 
 			# Track co-occurrences
 			l = len(buffer)
@@ -120,84 +140,18 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 					cols.append(buffer[j])
 					data.append(1)
 
-				'''
-				# Double pass
-				if (feature in self.inverted_index_):
-					idx = self.inverted_index_[feature]
-					w[idx] += 1 # TODO: Do we need the bloody counts????
-				else:
-					n_vocab += 1
-					self.inverted_index_[feature] = n_vocab
-					w.append(1)
-				'''
-		# Vocab was used for indexing (hence, started at 0 for the first item (NOT init!)), so has to be incremented by 1
-		# to reflect the true vocab count
-		n_vocab += 1
-
+		print('Creating sparse matrix...')
 		data = np.array(data, dtype=np.uint32, copy=False)
 		rows = np.array(rows, dtype=np.uint32, copy=False)
 		cols = np.array(cols, dtype=np.uint32, copy=False)
 
-		self.index_ = dict(zip(self.inverted_index_.values(), self.inverted_index_.keys()))
-
 		self.M_ = sparse.coo_matrix((data, (rows, cols)))
 
-		print(self.M_.A)
-		print(self.inverted_index_)
-		# Create Index
-		print('MANUAL VOCAB COUNT: {}'.format(n_vocab))
-		print('VOCAB COUNT: {}'.format(len(self.inverted_index_.keys())))
-		#self.index_ = dict(enumerate(self.inverted_index_.keys()))
-		#n_vocab = len(self.index_.keys())
+		# Apply Binarisation
+		if (self.binary):
+			self.M_ = np.minimum(self.M_, 1)
 
-		W = np.array(w, dtype=np.uint32)
-
-		# todo gensim.Dictionary.filter_extremes (???)
-		# Filter for Frequency
-		if (not self.binary and self.min_frequency > 0):
-			idx = np.where(W < self.min_frequency)[0]
-
-			for i in idx:
-				# Handle row indices
-				row_idx = np.where(rows==i)
-
-				row_idx_gt = np.where(rows>i)
-				rows[row_idx_gt] -= 1
-
-				rows = np.delete(rows, row_idx)
-				cols = np.delete(cols, row_idx)
-				data = np.delete(data, row_idx)
-
-				cols = np.delete(cols, col_idx)
-				data = np.delete(data, row_idx) # As there's all ones in the
-
-				# Handle col indices
-				col_idx = np.where(cols==i)
-
-				col_idx_gt = np.where(cols>i)
-				cols[col_idx_gt] -= 1
-
-				rows = np.delete(rows, col_idx)
-				cols = np.delete(cols, col_idx)
-				data = np.delete(data, col_idx)
-
-				# Handle vocabulary
-
-
-			W = self._delete_from_vocab(W, idx)
-
-			n_vocab -= len(idx)
-
-		# Max Features Filter
-		if (self.max_features is not None and self.max_features < n_vocab):
-			idx = np.argpartition(-W)[self.max_features + 1:]
-			W = self._delete_from_vocab(W, idx)
-
-			n_vocab -= len(idx)
-
-		self.p_w_ = W / W.sum()
-		self.vocab_count_ = n_vocab
-
+	'''
 	def _construct_cooccurrence_matrix_mmap(self):
 		self.M_ = np.memmap(os.path.join(self.memmap_path, 'M.dat'), dtype=np.uint32, mode='w+', shape=(self.vocab_count_, self.vocab_count_))
 		self.M_[:] = np.zeros((self.vocab_count_, self.vocab_count_))
@@ -218,17 +172,14 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		#	for feature in self.analyser_fn_(doc):
 
 
-		''' To mem heavy
+		# To mem heavy
 		for idx in self.index_.keys():
 			occurrences = np.where(self.temp_tokens_store_==idx)[0]
 			for occ_idx in occurrences:
 				cooccurrence_window = np.concatenate((self.temp_tokens_store_[occ_idx - self.window_size:occ_idx], self.temp_tokens_store_[occ_idx + 1:occ_idx + 1 + self.window_size]))
 
 				self.M_[idx, cooccurrence_window] += 1
-		'''
-	def _binarise(self):
-		if (self.binary): # todo move outside function
-			self.M_ = np.minimum(self.M, 1)
+	'''
 
 	def _apply_weight_option(self, pmi, P_w_c, p_c, idx, row):
 		if (self.weighting == 'ppmi'):
@@ -264,9 +215,11 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 
 		return self.T_
 
-	def _transform(self):
+	def _weight_transformation(self):
 		self.T_ = sparse.lil_matrix(self.M_.shape, dtype=np.float64)
 
+		# TODO: Check this: http://stackoverflow.com/questions/3247775/how-to-elementwise-multiply-a-scipy-sparse-matrix-by-a-broadcasted-dense-1d-arra
+		# Need a better way to do the rowwise multiplication
 		# Joint Probability for all co-occurrences, P(w, c) = P(c | w) * P(w) = P(w | c) * P(c)
 		P_w_c = (self.M_ / self.M_.sum(axis=1)).A * self.p_w_.reshape(-1, 1)
 
@@ -308,18 +261,16 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		return self.T_
 
 	def fit(self, raw_documents, y=None):
-		self._extract_vocabulary(raw_documents)
+		self._construct_cooccurrence_matrix(raw_documents)
 
 		# Construct Co-Occurrence Matrix
-		if (self.use_memmap):
-			self._construct_cooccurrence_matrix_mmap()
-		else:
-			self._construct_cooccurrence_matrix(raw_documents)
+		#if (self.use_memmap):
+		#	self._construct_cooccurrence_matrix_mmap()
+		#else:
+		#	self._construct_cooccurrence_matrix(raw_documents)
 
-		self.temp_tokens_store_ = None
-
-		# Apply Binarisation
-		self._binarise() # todo make optional
+		# Apply weighting transformation
+		self._weight_transformation()
 
 		return self
 
