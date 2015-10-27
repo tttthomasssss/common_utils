@@ -21,7 +21,7 @@ def apply_offset_path(path, offset):
 		head, *tail = path.split('\xbb')
 
 		if ('_{}'.format(head) == offset or '_{}'.format(offset) == head):
-			offset_path = tail
+			offset_path = '\xbb'.join(tail)
 		else:
 			offset_path = '\xbb'.join([offset, path])
 
