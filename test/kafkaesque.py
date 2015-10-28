@@ -29,8 +29,8 @@ def vectorize_kafka():
 
 	with open(os.path.join(paths.get_dataset_path(), 'kafka', 'kafka_one_line_lc.txt'), mode='r', encoding='utf-8') as f:
 		#vec = VSMVectorizer(window_size=5, cds=0.75, svd=300, svd_eig_weighting=0.5, sppmi_shift=5)
-		vec = VSMVectorizer(window_size=5, min_frequency=5)
-		M_ppmi = vec.fit_transform([f.read()])
+		vec = VSMVectorizer(window_size=5, min_frequency=3)
+		M_ppmi = vec.fit([f.read()])
 
 		print ('PPMI Matrix created!')
 

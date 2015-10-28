@@ -18,6 +18,7 @@ import numpy as np
 	# Proper Logging would be nice
 	# Optimise the shizzle-whizzle
 	# Remove memmap? properly support it?
+	# Improve numerical precision
 class VSMVectorizer(BaseEstimator, VectorizerMixin):
 	def __init__(self, window_size, weighting='ppmi', min_frequency=0, lowercase=True, stop_words=None, encoding='utf-8',
 				 max_features=None, preprocessor=None, tokenizer=None, analyzer='word', binary=False, sppmi_shift=1,
@@ -181,15 +182,15 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 				self.M_[idx, cooccurrence_window] += 1
 	'''
 
-	def _apply_weight_option(self, pmi, P_w_c, p_c, idx, row):
+	def _apply_weight_option(self, PMI, P_w_c, p_c):
 		if (self.weighting == 'ppmi'):
-			return pmi
+			return PMI
 		elif (self.weighting == 'plmi'):
-			return P_w_c[idx, row] * pmi
+			return P_w_c * PMI
 		elif (self.weighting == 'pnpmi'):
-			return (P_w_c[idx, row] * (1 / -(np.log(p_c)))) * pmi
+			return None #(P_w_c[idx, row] * (1 / -(np.log(p_c)))) * pmi # TODO
 		elif (self.weighting == 'sppmi'):
-			return pmi - np.log(self.sppmi_shift)
+			return PMI - np.log(self.sppmi_shift)
 
 	def _transform_memmap(self):
 		self.T_ = np.memmap(os.path.join(self.memmap_path, '%s.dat' % (self.weighting.upper(),)), dtype=np.uint32, mode='w+', shape=(self.vocab_count_, self.vocab_count_))
@@ -218,34 +219,25 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 	def _weight_transformation(self):
 		self.T_ = sparse.lil_matrix(self.M_.shape, dtype=np.float64)
 
-		# TODO: Check this: http://stackoverflow.com/questions/3247775/how-to-elementwise-multiply-a-scipy-sparse-matrix-by-a-broadcasted-dense-1d-arra
-		# TODO: Check which of the two is faster
-		# Need a better way to do the rowwise multiplication
-		#P_w = sparse.dia_matrix(self.M_.shape)
-		#P_w.setdiag(self.p_w_)
-		#P_w_c = ((self.M_ / self.M_.sum(axis=1)) * P_w)
-
 		# Joint Probability for all co-occurrences, P(w, c) = P(c | w) * P(w) = P(w | c) * P(c)
-		P_w_c = (self.M_ / self.M_.sum(axis=1)).A * self.p_w_.reshape(-1, 1)
+		# Doing it this way, keeps P_w_c a sparse matrix: http://stackoverflow.com/questions/3247775/how-to-elementwise-multiply-a-scipy-sparse-matrix-by-a-broadcasted-dense-1d-arra
+		P_w = sparse.lil_matrix(self.M_.shape)
+		P_w.setdiag((self.p_w_.reshape(-1, 1) / self.M_.sum(axis=1)))
+		P_w_c = P_w * self.M_
 
-		# Perform weighting
-		for idx in self.index_.keys():
-			row = (self.M_[idx, :] > 0).indices
+		# Marginals for context (with optional context distribution smoothing)
+		p_c = self.p_w_ ** self.cds
 
-			# Marginals for context (with optional context distribution smoothing)
-			p_c = self.p_w_[row] ** self.cds
+		# The product of all P(w) and P(c) marginals is the outer product of p_w and p_c
+		P_wc_marginals = np.outer(self.p_w_, p_c)
 
-			# PMI
-			pmi = np.log(P_w_c[idx, row]) - (np.log(self.p_w_[idx]) + np.log(p_c))
+		# PMI matrix is then the log difference between the joints and the marginals
+		P_w_c.data = np.log(P_w_c.data)
+		P_wc_marginals.data = np.log(P_wc_marginals.data)
+		PMI = P_w_c - P_wc_marginals
 
-			# Apply PMI variant (e.g. PPMI, SPPMI, PLMI or PNPMI)
-			# todo discoutils has an OK-ish PPMI implementation
-			tpmi = self._apply_weight_option(pmi, self.weighting, p_c, idx, row)
-
-			self.T_[idx, row] = np.maximum(0, tpmi)
-
-		# CSR!!!
-		self.T_ = self.T_.tocsr()
+		# Apply PMI variant (e.g. PPMI, SPPMI, PLMI or PNPMI) and threshold at 0
+		self.T_ = np.maximum(0, self._apply_weight_option(PMI, P_w_c, p_c))
 
 		# Apply SVD
 		if self.svd_dims:
