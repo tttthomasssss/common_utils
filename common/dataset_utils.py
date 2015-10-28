@@ -1378,7 +1378,7 @@ def _stanford_stb_fine_grained_label_mapping(sentiment_score):
 		return 4
 
 
-def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'cached_vectors'), dep_order=2, normalised=True):
+def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'cached_vectors'), dep_order=2, normalised=True, exclude_contexts=False):
 	fname_1 = '1.cached_ctx_vecs-{}{}.json.gz'.format(dep_order, '-norm' if normalised else '')
 	fname_2 = '2.cached_ctx_vecs-{}{}.json.gz'.format(dep_order, '-norm' if normalised else '')
 	subpath = 'wiki_lc_{}{}'.format(dep_order, '_norm' if normalised else '')
@@ -1400,11 +1400,12 @@ def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths
 			target_word_1 = extracted_ctx_1.strip().split('\t')[0].lower()
 			target_word_2 = extracted_ctx_2.split('\t')[0].lower()
 
-			for ctx, target_ctx in zip([ctx_1, ctx_2], [target_ctx_1, target_ctx_2]):
-				for c in ctx.split(','):
-					word, rel = c.split('_')
+			if (not exclude_contexts):
+				for ctx, target_ctx in zip([ctx_1, ctx_2], [target_ctx_1, target_ctx_2]):
+					for c in ctx.split(','):
+						word, rel = c.split('_')
 
-					target_ctx.append((word, rel))
+						target_ctx.append((word, rel))
 
 		# Extract target & context vectors
 		target_words_1 = [t[0] for t in target_ctx_1]
