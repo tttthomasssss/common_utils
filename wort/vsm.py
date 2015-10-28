@@ -221,11 +221,12 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		# TODO: Check this: http://stackoverflow.com/questions/3247775/how-to-elementwise-multiply-a-scipy-sparse-matrix-by-a-broadcasted-dense-1d-arra
 		# TODO: Check which of the two is faster
 		# Need a better way to do the rowwise multiplication
+		#P_w = sparse.dia_matrix(self.M_.shape)
+		#P_w.setdiag(self.p_w_)
+		#P_w_c = ((self.M_ / self.M_.sum(axis=1)) * P_w)
+
 		# Joint Probability for all co-occurrences, P(w, c) = P(c | w) * P(w) = P(w | c) * P(c)
-		#P_w_c = (self.M_ / self.M_.sum(axis=1)).A * self.p_w_.reshape(-1, 1)
-		P_w = sparse.dia_matrix(self.M_.shape)
-		P_w.setdiag(self.p_w_)
-		P_w_c = ((self.M_ / self.M_.sum(axis=1)) * P_w).T
+		P_w_c = (self.M_ / self.M_.sum(axis=1)).A * self.p_w_.reshape(-1, 1)
 
 		# Perform weighting
 		for idx in self.index_.keys():
