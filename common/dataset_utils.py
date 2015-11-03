@@ -1432,19 +1432,23 @@ def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths
 		if (not os.path.exists(out_path)):
 			os.makedirs(out_path)
 
-			with gzip.open(os.path.join(out_path, fname_1), 'wt') as vec_dump:
-				vec_dump.write(json.dumps(vectors_1))
+		print('Caching vector file: {}'.format(os.path.join(out_path, fname_1)))
+
+		with gzip.open(os.path.join(out_path, fname_1), 'wt') as vec_dump:
+			vec_dump.write(json.dumps(vectors_1))
 
 		# Cache CTX 2
-		vectors_2 = vector_utils.load_csv_vectors(vector_in_file, words=target_words_2, out_prefix='\t', mod_logging_freq=3000)
+		vectors_2 = vector_utils.load_csv_vectors(os.path.join(vec_path, vector_in_file), words=target_words_2, out_prefix='\t', mod_logging_freq=3000)
 
 		out_path = os.path.join(dataset_path, subpath, str(example_id))
 
 		if (not os.path.exists(out_path)):
 			os.makedirs(out_path)
 
-			with gzip.open(os.path.join(out_path, fname_2), 'wt') as vec_dump:
-				vec_dump.write(json.dumps(vectors_2))
+		print('Caching vector file: {}'.format(os.path.join(out_path, fname_1)))
+
+		with gzip.open(os.path.join(out_path, fname_2), 'wt') as vec_dump:
+			vec_dump.write(json.dumps(vectors_2))
 
 	return (vectors_1, vectors_2)
 
