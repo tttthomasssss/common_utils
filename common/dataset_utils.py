@@ -1379,7 +1379,7 @@ def _stanford_stb_fine_grained_label_mapping(sentiment_score):
 
 
 def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'cached_vectors'),
-									 dep_order=2, normalised=True, exclude_contexts=False, use_lemma=False, use_pos=False):
+									 dep_order=2, normalised=True, exclude_contexts=False, use_lemma=False, use_pos=False, use_pmi=False):
 	fname_1 = '1.cached_ctx_vecs-{}{}.json.gz'.format(dep_order, '-norm' if normalised else '')
 	fname_2 = '2.cached_ctx_vecs-{}{}.json.gz'.format(dep_order, '-norm' if normalised else '')
 	subpath = 'wiki_lc_{}{}'.format(dep_order, '_norm' if normalised else '')
@@ -1420,7 +1420,7 @@ def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths
 			target_words_2.append(target_word_2)
 
 		vec_path = os.path.join(paths.get_dataset_path(), 'wikipedia', 'vectors')
-		vector_in_file = 'wikipedia_lc_{}{}_lemma-{}_pos-{}_vectors.tsv.gz'.format(dep_order, '_norm' if normalised else '', use_lemma, use_pos)
+		vector_in_file = 'wikipedia_lc_{}{}_lemma-{}_pos-{}{}_vectors.tsv.gz'.format(dep_order, '_norm' if normalised else '', use_lemma, use_pos, '_pmi' if use_pmi else '')
 
 		# Cache CTX 1
 		vectors_1 = vector_utils.load_csv_vectors(os.path.join(vec_path, vector_in_file), words=target_words_1, out_prefix='\t', mod_logging_freq=3000)
