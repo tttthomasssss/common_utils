@@ -1422,6 +1422,8 @@ def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths
 		vec_path = os.path.join(paths.get_dataset_path(), 'wikipedia', 'vectors')
 		vector_in_file = 'wikipedia_lc_{}{}_lemma-{}_pos-{}{}_vectors.tsv.gz'.format(dep_order, '_norm' if normalised else '', use_lemma, use_pos, '_pmi' if use_pmi else '')
 
+		print('Loading Vectors from File={}; Full path={}'.format(vector_in_file, os.path.join(vec_path, vector_in_file)))
+
 		# Cache CTX 1
 		vectors_1 = vector_utils.load_csv_vectors(os.path.join(vec_path, vector_in_file), words=target_words_1, out_prefix='\t', mod_logging_freq=3000)
 
