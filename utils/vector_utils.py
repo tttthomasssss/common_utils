@@ -15,6 +15,9 @@ def open_file(filename, mode='r', encoding='utf-8'):
 
 def apply_offset_path(path, offset):
 
+	#print('PATH: {}'.format(path))
+	#print('\tOFFSET: {}'.format(offset))
+
 	if (path.startswith(':')): # EPSILON
 		offset_path = offset + path
 	else: # TODO: What to do with invalid paths?

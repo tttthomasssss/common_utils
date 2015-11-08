@@ -23,7 +23,7 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 	def __init__(self, window_size, weighting='ppmi', min_frequency=0, lowercase=True, stop_words=None, encoding='utf-8',
 				 max_features=None, preprocessor=None, tokenizer=None, analyzer='word', binary=False, sppmi_shift=1,
 				 token_pattern=r'(?u)\b\w\w+\b', decode_error='strict', strip_accents=None, input='content',
-				 ngram_range=(1, 1), cds=1, svd=None, svd_eig_weighting=1, add_context_vectors=True,
+				 ngram_range=(1, 1), cds=1, svd_dim=None, svd_eig_weighting=1, add_context_vectors=True,
 				 use_memmap=False, memmap_path=None):
 
 		self.window_size = window_size
@@ -46,7 +46,7 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		self.input = input
 		self.ngram_range = ngram_range
 		self.cds = cds
-		self.svd_dims = svd
+		self.svd_dim = svd_dim
 		self.svd_eig_weighting = svd_eig_weighting
 		self.add_context_vectors = add_context_vectors
 
@@ -188,7 +188,7 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		elif (self.weighting == 'plmi'):
 			return P_w_c * PMI
 		elif (self.weighting == 'pnpmi'):
-			return None #(P_w_c[idx, row] * (1 / -(np.log(p_c)))) * pmi # TODO
+			raise NotImplementedError #(P_w_c[idx, row] * (1 / -(np.log(p_c)))) * pmi # TODO
 		elif (self.weighting == 'sppmi'):
 			return PMI - np.log(self.sppmi_shift)
 
@@ -240,8 +240,8 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 		self.T_ = np.maximum(0, self._apply_weight_option(PMI, P_w_c, p_c))
 
 		# Apply SVD
-		if self.svd_dims:
-			Ut, S, Vt = sparsesvd(self.T_.tocsc(), self.svd_dims)
+		if (self.svd_dim is not None):
+			Ut, S, Vt = sparsesvd(self.T_.tocsc(), self.svd_dim)
 
 			# Perform Context Weighting
 			S = sparse.csr_matrix(np.diag(S ** self.svd_eig_weighting))
@@ -274,10 +274,14 @@ class VSMVectorizer(BaseEstimator, VectorizerMixin):
 	def transform(self, raw_documents):
 		# todo move to a different class or rename?
 		# Apply the weighting transformation
-		if (self.use_memmap):
-			return sparse.csr_matrix(self._transform_memmap())
-		else:
-			return self._transform()
+		#if (self.use_memmap):
+		#	return sparse.csr_matrix(self._transform_memmap())
+		#else:
+		#	return self._transform()
+		if (self.T_ is not None):
+			return self.T_
+		else: # TODO: perform lookup
+			raise NotImplementedError
 
 	def fit_transform(self, raw_documents, y=None):
 		self.fit(raw_documents)
