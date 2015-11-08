@@ -1,4 +1,5 @@
 __author__ = 'thk22'
+import collections
 import csv
 import gzip
 import tarfile
@@ -38,6 +39,27 @@ def create_offset_vector(vector, offset_path):
 		offset_vector[apply_offset_path(feat, offset_path)] = vector[feat]
 
 	return offset_vector
+
+def collapse_offset_vector(offset_vector, offset_path=None):
+	reduced_offset_vector = collections.defaultdict(float) # TODO: for experiment, need reduction/collapsing step after offset!!!!
+	for key in offset_vector.keys():
+		head, feat = key.rsplit(':', 1)
+
+		parts = head.split('\xbb')
+		if (len(parts) > 1):
+			offset = parts[0] if offset_path is None else offset_path
+			if (offset[1:] == parts[1] or offset == parts[1][1:]):
+				new_key = '{}:{}'.format('\xbb'.join(parts[2:]), feat)
+				print('\tReducing Key={} to={}'.format(key, new_key))
+			else:
+				new_key = key
+		else:
+			new_key = key
+
+		reduced_offset_vector[new_key] += offset_vector[key]
+
+		return reduced_offset_vector
+
 
 def find_vector_indices(in_file, words, out_prefix, mod_logging_freq=10000):
 	vector_index = {}
