@@ -14,34 +14,48 @@ def open_file(filename, mode='r', encoding='utf-8'):
 		return open(filename, mode, encoding=encoding)
 
 
-def apply_offset_path(path, offset):
+def apply_offset_path(path, offset, incompatible_paths='ignore'):
+	'''
+	:param path: dependency path feature
+	:param offset: offset path
+	:param incompatible_paths: pass 'strict' to exclude incompatible paths (double negative path) or 'ignore' to leave them in
+	:return: offset_path or None if the path is incompatible and `incompatible_paths='strict'`
+	'''
 
 	#print('PATH: {}'.format(path))
 	#print('\tOFFSET: {}'.format(offset))
 
 	if (path.startswith(':')): # EPSILON
 		offset_path = offset + path
+	elif (path.startswith('_') and incompatible_paths == 'strict'):
+		offset_path = None
 	else: # TODO: What to do with invalid paths?
-		head, *tail = path.split('\xbb')
+		head, feat = path.rsplit(':', 1)
+		parts = head.split('\xbb')
 
-		if ('_{}'.format(head) == offset or '_{}'.format(offset) == head):
-			offset_path = '\xbb'.join(tail)
+		if ('_{}'.format(parts[0]) == offset or '_{}'.format(offset) == parts[0]):
+			offset_path = '{}:{}'.format('\xbb'.join(parts[1:]), feat)
 		else:
 			offset_path = '\xbb'.join([offset, path])
 
 	return offset_path
 
-def create_offset_vector(vector, offset_path):
+
+def create_offset_vector(vector, offset_path, incompatible_paths='ignore'):
 	# Translate from my notation to Dave's notation
 	if (offset_path.startswith('!')):
 		offset_path = '_' + offset_path[1:]
 
-	offset_vector = {}
+	v = {}
 
 	for feat in vector.keys():
-		offset_vector[apply_offset_path(feat, offset_path)] = vector[feat]
+		new_feat_path = apply_offset_path(feat, offset_path, incompatible_paths=incompatible_paths)
 
-	return offset_vector
+		if (new_feat_path is not None):
+			v[new_feat_path] = vector[feat]
+
+	return v
+
 
 def collapse_offset_vector(offset_vector, offset_path=None):
 	reduced_offset_vector = collections.defaultdict(float) # TODO: for experiment, need reduction/collapsing step after offset!!!!
