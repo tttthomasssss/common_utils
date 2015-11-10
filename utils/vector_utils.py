@@ -78,6 +78,26 @@ def collapse_offset_vector(offset_vector, offset_path=None):
 		return reduced_offset_vector
 
 
+def oov_check(in_file, words, out_prefix, mod_logging_freq=10000):
+	print ('Loading vectors from: {}'.format(in_file))
+	print ('Words of interest: {}'.format(words))
+	with open_file(in_file, 'rt', encoding='utf-8') as in_stream:
+		for line_idx, line in enumerate(in_stream):
+			if (line_idx % mod_logging_freq == 0): print('{}Reading line {}; Words left to find: {}'.format(out_prefix, line_idx, len(words) if words is not None else -1))
+
+			line = line.rstrip().split('\t') # Line ends with a tab
+
+			entry = line[0]
+			if (entry in words):
+
+				words.remove(entry)
+
+			if (words is not None and len(words) <= 0): # Early stopping
+				break
+
+	return words
+
+
 def find_vector_indices(in_file, words, out_prefix, mod_logging_freq=10000):
 	vector_index = {}
 	print ('Loading vectors from: {}'.format(in_file))

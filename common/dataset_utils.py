@@ -1380,7 +1380,7 @@ def _stanford_stb_fine_grained_label_mapping(sentiment_score):
 
 def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'cached_vectors'),
 									 dep_order=2, normalised=True, exclude_contexts=False, use_lemma=False, use_pos=False, use_pmi=False,
-									 cache_if_not_exists=True):
+									 cache_if_not_exists=True, composition_order=1):
 	fname_1 = '1.cached_ctx_vecs-{}{}.json.gz'.format(dep_order, '-norm' if normalised else '')
 	fname_2 = '2.cached_ctx_vecs-{}{}.json.gz'.format(dep_order, '-norm' if normalised else '')
 	subpath = 'wiki_lc_{}{}'.format(dep_order, '_norm' if normalised else '')
@@ -1408,7 +1408,8 @@ def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths
 					for c in ctx.split(','):
 						word, rel = c.split('_')
 
-						target_ctx.append((word, rel))
+						if (len(rel.split('.')) <= composition_order):
+							target_ctx.append((word.lower(), rel))
 
 		# Extract target & context vectors
 		target_words_1 = [t[0] for t in target_ctx_1]
@@ -1425,23 +1426,18 @@ def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths
 
 		print('Loading Vectors from File={}; Full path={}'.format(vector_in_file, os.path.join(vec_path, vector_in_file)))
 
-		# Cache CTX 1
-		vectors_1 = vector_utils.load_csv_vectors(os.path.join(vec_path, vector_in_file), words=target_words_1, out_prefix='\t', mod_logging_freq=3000)
+		# Cache CTXs, load target words commonly to reduce i/o load a bit and split them later
+		vectors = vector_utils.load_csv_vectors(os.path.join(vec_path, vector_in_file), words=target_words_1 + target_words_2, out_prefix='\t', mod_logging_freq=3000)
 
-		# Caching requires a shitton of space, hence its optional
-		if (cache_if_not_exists):
-			out_path = os.path.join(dataset_path, subpath, str(example_id))
+		vectors_1 = {}
+		for w in target_words_1:
+			if (w in vectors):
+				vectors_1[w] = vectors[w]
 
-			if (not os.path.exists(out_path)):
-				os.makedirs(out_path)
-
-				print('Caching vector file: {}'.format(os.path.join(out_path, fname_1)))
-
-				with gzip.open(os.path.join(out_path, fname_1), 'wt') as vec_dump:
-					vec_dump.write(json.dumps(vectors_1))
-
-		# Cache CTX 2
-		vectors_2 = vector_utils.load_csv_vectors(os.path.join(vec_path, vector_in_file), words=target_words_2, out_prefix='\t', mod_logging_freq=3000)
+		vectors_2 = {}
+		for w in target_words_2:
+			if (w in vectors):
+				vectors_2[w] = vectors[w]
 
 		# Caching requires a shitton of space, hence its optional
 		if (cache_if_not_exists):
@@ -1451,7 +1447,10 @@ def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths
 				os.makedirs(out_path)
 
 			print('Caching vector file: {}'.format(os.path.join(out_path, fname_1)))
+			with gzip.open(os.path.join(out_path, fname_1), 'wt') as vec_dump:
+				vec_dump.write(json.dumps(vectors_1))
 
+			print('Caching vector file: {}'.format(os.path.join(out_path, fname_2)))
 			with gzip.open(os.path.join(out_path, fname_2), 'wt') as vec_dump:
 				vec_dump.write(json.dumps(vectors_2))
 
