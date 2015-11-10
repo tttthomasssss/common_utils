@@ -1427,7 +1427,7 @@ def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths
 		print('Loading Vectors from File={}; Full path={}'.format(vector_in_file, os.path.join(vec_path, vector_in_file)))
 
 		# Cache CTXs, load target words commonly to reduce i/o load a bit and split them later
-		vectors = vector_utils.load_csv_vectors(os.path.join(vec_path, vector_in_file), words=target_words_1 + target_words_2, out_prefix='\t', mod_logging_freq=3000)
+		vectors = vector_utils.load_csv_vectors(os.path.join(vec_path, vector_in_file), words=list(set(target_words_1) | set(target_words_2)), out_prefix='\t', mod_logging_freq=3000)
 
 		vectors_1 = {}
 		for w in target_words_1:
