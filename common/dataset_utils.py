@@ -1404,12 +1404,20 @@ def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths
 			target_word_2 = extracted_ctx_2.split('\t')[0].lower()
 
 			if (not exclude_contexts):
+				buffer = ''
 				for ctx, target_ctx in zip([ctx_1, ctx_2], [target_ctx_1, target_ctx_2]):
 					for c in ctx.split(','):
-						word, rel = c.split('_')
+						if ('_' not in c):
+							buffer += c
+						else:
+							word, rel = c.rsplit('_', 1)
 
-						if (len(rel.split('.')) <= composition_order):
-							target_ctx.append((word.lower(), rel))
+							if (buffer != ''):
+								word = '{},{}'.format(buffer, word)
+								buffer = ''
+
+							if (len(rel.split('.')) <= composition_order):
+								target_ctx.append((word.lower(), rel))
 
 		# Extract target & context vectors
 		target_words_1 = [t[0] for t in target_ctx_1]
