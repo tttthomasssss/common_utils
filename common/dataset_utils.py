@@ -15,6 +15,7 @@ from discoutils import stanford_utils
 from gensim.models import Word2Vec
 from gensim.test.test_doc2vec import read_su_sentiment_rotten_tomatoes
 from scipy import sparse
+from scipy.io import loadmat
 from sklearn.datasets import fetch_20newsgroups
 from sklearn.externals import joblib
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer, TfidfTransformer
@@ -1376,6 +1377,50 @@ def _stanford_stb_fine_grained_label_mapping(sentiment_score):
 		return 3
 	elif (sentiment_score > 0.8):
 		return 4
+
+
+def fetch_huang_et_al_2012_vectors(dataset_path=os.path.join(paths.get_dataset_path(), 'huang_et_al_2012'), original=False):
+	vectors_path = os.path.join(dataset_path, 'embeddings', 'wordreps_orig.mat' if original else 'wordreps.mat')
+	vocab_path = os.path.join(dataset_path, 'embeddings', 'vocab.mat')
+
+	# TODO: Stuff
+	V = loadmat(vocab_path)
+
+	W = loadmat(vectors_path)
+
+	return None
+
+
+def fetch_collobert_and_weston_vectors(dataset_path=os.path.join(paths.get_dataset_path(), 'collobert_weston_original'), target_words=None):
+	index = None
+	W = None
+
+	if (target_words is None): # Load all
+		# Build inverted word index
+		with open(os.path.join(dataset_path, 'senna', 'hash', 'words.lst')) as f_word_list:
+			word_list = list(map(lambda w: w.strip(), f_word_list.read().split('\n')))
+
+		index = dict(zip(word_list, range(len(word_list))))
+
+		W = np.loadtxt(os.path.join(dataset_path, 'senna', 'embeddings', 'embeddings.txt'))
+	else:
+		with open(os.path.join(dataset_path, 'senna', 'hash', 'words.lst')) as f_word_list:
+			word_list = list(map(lambda w: w.strip(), f_word_list.read().split('\n')))
+
+		all_index = dict(zip(word_list, range(len(word_list))))
+		index = dict(zip(target_words), range(len(target_words)))
+
+		rng = []
+		for w in target_words:
+			if (w in all_index):
+				rng.append(all_index[w])
+			else:
+				rng.append(all_index['UNKNOWN'])
+
+		W = np.loadtxt(os.path.join(dataset_path, 'senna', 'embeddings', 'embeddings.txt'))
+		W = W[np.array(rng)]
+
+	return (index, W)
 
 
 def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'cached_vectors'),
