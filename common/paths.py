@@ -28,6 +28,15 @@ _LOG_PATH = {
 	'disco': os.path.expanduser('~/_logs')
 }
 
+# So far, only disco supports external paths
+_EXTERNAL_BASE_PATH = {
+	'disco': '/mnt/external/thk22/'
+}
+
+_EXTERNAL_DATASET_PATH = {
+	'disco': '/mnt/external/thk22/_datasets'
+}
+
 
 def get_base_path():
 	return _BASEPATH.get(socket.gethostname(), '/lustre/scratch/inf/thk22/code') # Fallback on lustre path on cluster
@@ -43,3 +52,11 @@ def get_out_path():
 
 def get_log_path():
 	return _LOG_PATH.get(socket.gethostname(), '/lustre/scratch/inf/thk22/_logs') # Fallback on lustre path on cluster
+
+
+def get_external_base_path():
+	return _EXTERNAL_BASE_PATH[socket.gethostname()] # fail loudly!!!
+
+
+def get_external_dataset_path():
+	return _EXTERNAL_DATASET_PATH[socket.gethostname()] # fail loudly!!!
