@@ -12,8 +12,12 @@ import string
 
 #from bs4 import BeautifulSoup
 #from discoutils import stanford_utils
-from gensim.models import Word2Vec
-from gensim.test.test_doc2vec import read_su_sentiment_rotten_tomatoes
+# The cluster is fucking me hard these days...
+try:
+	from gensim.models import Word2Vec
+	from gensim.test.test_doc2vec import read_su_sentiment_rotten_tomatoes
+except:
+	pass
 from scipy import sparse
 from scipy.io import loadmat
 from sklearn.datasets import fetch_20newsgroups
