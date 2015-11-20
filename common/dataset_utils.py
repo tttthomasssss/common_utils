@@ -11,7 +11,7 @@ import os
 import string
 
 #from bs4 import BeautifulSoup
-from discoutils import stanford_utils
+#from discoutils import stanford_utils
 from gensim.models import Word2Vec
 from gensim.test.test_doc2vec import read_su_sentiment_rotten_tomatoes
 from scipy import sparse
@@ -1566,6 +1566,7 @@ def fetch_scws_dataset(dataset_path=os.path.join(paths.get_dataset_path(), 'word
 					f.close()
 
 			# Dependency Parse with Stanford Parser
+			'''
 			for folder in os.listdir(os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed')):
 				processed_path = os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'processed', folder)
 				parsed_path = os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'parsed', folder)
@@ -1573,4 +1574,4 @@ def fetch_scws_dataset(dataset_path=os.path.join(paths.get_dataset_path(), 'word
 					if (not os.path.exists(parsed_path)):
 						os.makedirs(parsed_path)
 					stanford_utils.run_stanford_pipeline(processed_path, os.path.join(paths.get_base_path(), 'stanford-corenlp'), java_threads=4, filelistdir="")
-
+			'''
