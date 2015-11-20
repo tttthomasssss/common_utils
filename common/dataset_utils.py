@@ -18,7 +18,6 @@ try:
 	from gensim.test.test_doc2vec import read_su_sentiment_rotten_tomatoes
 except:
 	pass
-from scipy import sparse
 from scipy.io import loadmat
 from sklearn.datasets import fetch_20newsgroups
 from sklearn.externals import joblib
