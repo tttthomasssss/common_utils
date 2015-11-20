@@ -10,7 +10,7 @@ import pickle
 import os
 import string
 
-from bs4 import BeautifulSoup
+#from bs4 import BeautifulSoup
 from discoutils import stanford_utils
 from gensim.models import Word2Vec
 from gensim.test.test_doc2vec import read_su_sentiment_rotten_tomatoes
@@ -427,7 +427,7 @@ def fetch_webkb_dataset_vectorized(dataset_path, use_tfidf=False, extraction_sty
 		tfidf_vectorizer = TfidfVectorizer(decode_error='replace')
 		count_vectorizer = CountVectorizer(decode_error='replace', binary=binarize)
 		transformer = TfidfTransformer(use_idf=False)
-
+		'''
 		for path in glob.glob(os.path.join(dataset_path, '*')):
 			_, label = os.path.split(path)
 			for sub_path in glob.glob(os.path.join(path, '*')):
@@ -436,7 +436,7 @@ def fetch_webkb_dataset_vectorized(dataset_path, use_tfidf=False, extraction_sty
 					content = soup.get_text(' ', strip=True).replace(r'\r', '').replace(r'\n', '')
 					#TODO: When time, get rid of the headers....
 					print('CONTENT:', content)
-
+		'''
 	return (vectorized_train, train_labels)
 
 
