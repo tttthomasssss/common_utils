@@ -12,45 +12,6 @@ import joblib
 import numpy as np
 
 from common import paths
-from wort.vsm import VSMVectorizer
-
-
-def vectorize_kafka():
-
-	docs = [
-		'i sat on a table',
-		'the cat sat on the mat.',
-		'the pizza sat next to the table',
-		'a green curry sat under the chair'
-	]
-
-	#vec = VSMVectorizer(window_size=2, min_frequency=2)
-	#M_ppmi = vec.fit_transform(docs)
-
-	with open(os.path.join(paths.get_dataset_path(), 'kafka', 'kafka_one_line_lc.txt'), mode='r', encoding='utf-8') as f:
-		#vec = VSMVectorizer(window_size=5, cds=0.75, svd=300, svd_eig_weighting=0.5, sppmi_shift=5)
-		vec = VSMVectorizer(window_size=5, min_frequency=3)
-		M_ppmi = vec.fit([f.read()])
-
-		print ('PPMI Matrix created!')
-
-	words = filter(lambda w: True if w in vec.inverted_index_.keys() else False, ['manager', 'director', 'clerk', 'innocent', 'judge', 'court', 'lawyer', 'law', 'josef', 'gregor', 'animal', 'samsa', 'trial', 'sister', 'father', 'mother', 'office', 'coat', 'work', 'fear', 'love', 'hate', 'manner', 'money', 'suit', 'custom', 'house', 'visitor'])
-
-	for w in words:
-		idx = vec.inverted_index_[w]
-
-		min_dist = np.inf
-		min_idx = -1
-
-		for i in range(M_ppmi.shape[0]):
-			if (i != idx):
-				curr_dist = distance.cosine(M_ppmi[idx].A, M_ppmi[i].A)
-
-				if (curr_dist < min_dist):
-					min_idx = i
-					min_dist = curr_dist
-
-		print('\t[SIM=%.4f] WORD=%s; MOST SIMILAR=%s' % (min_dist, w, vec.index_[min_idx]))
 
 
 def tokenize_kafka():
@@ -197,7 +158,7 @@ def kafka_most_similar():
 			min_dist = np.inf
 			min_idx = -1
 
-			for i in xrange(M.shape[1]):
+			for i in range(M.shape[1]):
 				if (i != idx):
 					curr_dist = distance.cosine(M[idx], M[i])
 
@@ -207,40 +168,9 @@ def kafka_most_similar():
 
 			print('\t[SIM=%.4f] WORD=%s; MOST SIMILAR=%s' % (min_dist, w, index[min_idx]))
 
-def wikipedia_iterator():
-	from corpus_readers.wikipedia import WikipediaReader
 
-	binary = [True, False]
-	weightings = ['ppmi', 'sppmi', 'pnpmi', 'plmi']
-	window_sizes = [3, 5, 10]
-	min_frequencies = [20, 50, 100]
-
-	with open(os.path.join(paths.get_dataset_path(), 'wikipedia', 'wikipedia_utf8_filtered_20pageviews.csv')) as csv_file:
-		#csv_reader = csv.reader(csv_file)
-		#vec = VSMVectorizer(window_size=5, use_memmap=True, memmap_path=os.path.join(paths.get_dataset_path(), 'wikipedia'))
-		vec = VSMVectorizer(window_size=5)
-
-		M_ppmi = vec.fit_transform(csv_file)
-
-		print('SIZE: %r' % (M_ppmi.shape,))
-
-		#joblib.dump(M_ppmi, os.path.join(paths.get_dataset_path(), 'wikipedia', 'wikipedia_ppmi_size-5'))
-
-	'''
-	r = WikipediaReader(os.path.join(paths.get_dataset_path(), 'wikipedia', 'wikipedia_utf8_filtered_20pageviews.csv'))
-	token_count = 0
-
-	for idx, tokens in enumerate(r):
-		if (idx % 1000 == 0):
-			print('%d lines processed; current token count = %d...' % (idx, token_count))
-
-		token_count += len(tokens)
-
-	print ('NUM_LINES=%d; NUM_TOKENS=%d' % (idx, token_count))
-	'''
 
 if (__name__ == '__main__'):
-	#tokenize_kafka()
+	tokenize_kafka()
 	#kafka_most_similar()
 	#wikipedia_iterator()
-	vectorize_kafka()
