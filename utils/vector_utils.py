@@ -2,7 +2,10 @@ __author__ = 'thk22'
 import collections
 import csv
 import gzip
+import os
 import tarfile
+
+from common import paths
 
 
 def open_file(filename, mode='r', encoding='utf-8'):
@@ -170,6 +173,85 @@ def load_csv_vectors(infile='', words=None, out_prefix='', mod_logging_freq=1000
 
 	print('{}Loaded {} vectors'.format(out_prefix, len(vecs.keys())))
 	return vecs
+
+
+def convert_csv_vectors(in_file, out_file, conversion_map):
+	with open_file(in_file, 'rt', encoding='utf-8') as in_vectors, open_file(out_file, 'wt', encoding='utf-8') as out_vectors:
+		for idx, line in enumerate(in_vectors, 1):
+			if (idx % 3000 == 0): print('\tConverting line {}...'.format(idx))
+
+			line = line.rstrip().split('\t') # Line ends with a tab
+
+			entry = line[0]
+			out_vectors.write(entry + '\t')
+
+			features = line[1:]
+			converted_features = collections.defaultdict(float)
+			while len(features) > 0:
+				freq = float(features.pop())
+				feat = features.pop()
+
+				p, w = split_path_from_word(feat)
+
+				converted_deps = []
+				for f in p.split('\xbb'):
+					if (f.startswith('_')):
+						converted_dep = conversion_map[f[1:]]
+						converted_deps.append('_{}'.format(converted_dep))
+					else:
+						converted_deps.append(conversion_map[f])
+
+				converted_feature = ':'.join(['\xbb'.join(converted_deps), w])
+
+				# Collapse new duplicates (several distinct dep paths may map to the same grouped path)
+				converted_features[converted_feature] += freq
+
+			# Renormalise vectors
+			total = sum(converted_features.values())
+
+			for feat, val in converted_features.items():
+				converted_features[feat] /= total
+
+			# Write Features
+			for k, v in converted_features.items():
+				out_vectors.write(k + '\t' + str(v) + '\t')
+			out_vectors.write('\n')
+	print('\tConversion finished!')
+
+
+
+def split_path_from_word(event, universal_deps=open(os.path.join(paths.get_dataset_path(), 'stanford_universal_deps.csv'), 'r').read().strip().split(',')):
+	if (event.count(':') > 1):
+		path = []
+		word = []
+
+		for dep in reversed(event.split('\xbb')):
+			d = dep if not dep.startswith('_') else dep[1:]
+
+			if (':' in d):
+				subpath = []
+				for sub_dep in reversed(dep.split(':')):
+					sd = sub_dep if not sub_dep.startswith('_') else sub_dep[1:]
+					if (sd in universal_deps):
+						subpath.insert(0, sub_dep)
+					else:
+						word.insert(0, sub_dep)
+
+				# Handle words that happen to have the same signifier as a dependency
+				# The unfortunate case of a word containing a ':', where both parts of
+				# the word happen to be signifiers of a dependency is currently unhandled
+				# The hope is that if this case happens, it happens so infrequently as not
+				# to matter at all
+				if (len(word) <= 0):
+					word.insert(0, subpath.pop())
+
+				path.insert(0, ':'.join(subpath))
+			else:
+				path.insert(0, dep)
+		return '\xbb'.join(path), ':'.join(word)
+	else:
+		return event.rsplit(':', 1)
+
 
 #---
 #add two vectors
