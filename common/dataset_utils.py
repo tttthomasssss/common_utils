@@ -1424,10 +1424,17 @@ def fetch_collobert_and_weston_vectors(dataset_path=os.path.join(paths.get_datas
 
 def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths.get_dataset_path(), 'word_similarity_in_ctx', 'cached_vectors'),
 									 dep_order=2, normalised=True, exclude_contexts=False, use_lemma=False, use_pos=False, use_pmi=False,
-									 cache_if_not_exists=True, composition_order=1, coarse=False):
+									 cache_if_not_exists=True, composition_order=1, coarse=False, check_ext_cache=False):
 	fname_1 = '1.cached_ctx_vecs-{}{}.json.gz'.format(dep_order, '-norm' if normalised else '')
 	fname_2 = '2.cached_ctx_vecs-{}{}.json.gz'.format(dep_order, '-norm' if normalised else '')
 	subpath = 'wiki_lc_{}{}{}'.format(dep_order, '_norm' if normalised else '', '_coarse' if coarse else '')
+
+	# Check for global cache
+	ext_cache_name = 'wikipedia_lc_{}{}_lemma-{}_pos-{}{}_vectors_cache.joblib'.format(dep_order, '_norm' if normalised else '', use_lemma, use_pos, '_pmi' if use_pmi else '')
+	ext_cache_path = os.path.join(paths.get_external_dataset_path(), 'word_similarity_in_ctx', 'cached_vectors', ext_cache_name)
+	if (check_ext_cache and os.path.exists(os.path.join(ext_cache_path, ext_cache_name))):
+		return joblib.load(os.path.join(ext_cache_path, ext_cache_name))
+
 	if (os.path.exists(os.path.join(dataset_path, subpath, str(example_id), fname_1)) and os.path.exists(os.path.join(dataset_path, subpath, str(example_id), fname_2))):
 		with gzip.open(os.path.join(dataset_path, subpath, str(example_id), fname_1), 'rt') as vec_cache:
 			vectors_1 = json.loads(vec_cache.read())
