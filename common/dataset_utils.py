@@ -1432,7 +1432,7 @@ def fetch_scws_wikipedia_apt_vectors(example_id, dataset_path=os.path.join(paths
 	# Check for global cache
 	ext_cache_name = 'wikipedia_lc_{}{}_lemma-{}_pos-{}{}_vectors_cache.joblib'.format(dep_order, '_norm' if normalised else '', use_lemma, use_pos, '_pmi' if use_pmi else '')
 	ext_cache_path = os.path.join(paths.get_external_dataset_path(), 'word_similarity_in_ctx', 'cached_vectors', ext_cache_name)
-	if (check_ext_cache and os.path.exists(os.path.join(ext_cache_path, ext_cache_name))):
+	if (check_ext_cache and ext_cache_path):
 		return joblib.load(os.path.join(ext_cache_path, ext_cache_name))
 
 	if (os.path.exists(os.path.join(dataset_path, subpath, str(example_id), fname_1)) and os.path.exists(os.path.join(dataset_path, subpath, str(example_id), fname_2))):
