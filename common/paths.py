@@ -59,4 +59,4 @@ def get_external_base_path():
 
 
 def get_external_dataset_path():
-	return _EXTERNAL_DATASET_PATH[socket.gethostname()] # fail loudly!!!
+	return _EXTERNAL_DATASET_PATH.get(socket.gethostname(), '/lustre/scratch/inf/thk22/_datasets/CACHE')
