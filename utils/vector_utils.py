@@ -185,7 +185,6 @@ def filter_csv_vectors(in_file, out_file, min_count, logging, normalise=False):
 			line = line.rstrip().split('\t') # Line ends with a tab
 
 			entry = line[0]
-			out_vectors.write(entry + '\t')
 
 			features = line[1:]
 			filtered_vector = {}
@@ -209,11 +208,13 @@ def filter_csv_vectors(in_file, out_file, min_count, logging, normalise=False):
 				logging.info('\tFinished Normalising!')
 
 			# Write Features
-			logging.info('\tStarting to write vectors [old_feat_count={}; new_feat_count={}]...'.format(feat_count, filtered_feat_count))
-			for k, v in filtered_vector.items():
-				out_vectors.write(k + '\t' + str(v) + '\t')
-			out_vectors.write('\n')
-			logging.info('\tVector written to disk!')
+			if (len(filtered_vector) > 0):
+				logging.info('\tStarting to write vectors [old_feat_count={}; new_feat_count={}]...'.format(feat_count, filtered_feat_count))
+				out_vectors.write(entry + '\t')
+				for k, v in filtered_vector.items():
+					out_vectors.write(k + '\t' + str(v) + '\t')
+				out_vectors.write('\n')
+				logging.info('\tVector written to disk!')
 	logging.info('Conversion finished!')
 
 
