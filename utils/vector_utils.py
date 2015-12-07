@@ -175,7 +175,7 @@ def load_csv_vectors(infile='', words=None, out_prefix='', mod_logging_freq=1000
 	return vecs
 
 
-def filter_csv_vectors(in_file, out_file, min_count, logging, normalise=False):
+def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, normalise=False):
 	with open_file(in_file, 'rt', encoding='utf-8') as in_vectors, open_file(out_file, 'wt', encoding='utf-8') as out_vectors:
 		for idx, line in enumerate(in_vectors, 1):
 			logging.info('Converting line {}...'.format(idx))
@@ -194,7 +194,7 @@ def filter_csv_vectors(in_file, out_file, min_count, logging, normalise=False):
 				freq = float(features.pop())
 				feat = features.pop()
 
-				if (freq > min_count):
+				if (freq >= min_count):
 					filtered_feat_count += 1
 					filtered_vector[feat] = freq
 
@@ -208,13 +208,15 @@ def filter_csv_vectors(in_file, out_file, min_count, logging, normalise=False):
 				logging.info('\tFinished Normalising!')
 
 			# Write Features
-			if (len(filtered_vector) > 0):
+			if (len(filtered_vector) >= min_features):
 				logging.info('\tStarting to write vectors [old_feat_count={}; new_feat_count={}]...'.format(feat_count, filtered_feat_count))
 				out_vectors.write(entry + '\t')
 				for k, v in filtered_vector.items():
 					out_vectors.write(k + '\t' + str(v) + '\t')
 				out_vectors.write('\n')
 				logging.info('\tVector written to disk!')
+			else:
+				logging.info('\tSkipping vectors due to too few features: {} (min_features={})'.format(len(filtered_vector), min_features))
 	logging.info('Conversion finished!')
 
 
