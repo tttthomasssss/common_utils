@@ -7,6 +7,8 @@ import tarfile
 
 from common import paths
 
+import joblib
+
 
 def open_file(filename, mode='r', encoding='utf-8'):
 	if (filename.endswith('tar.gz')):
@@ -173,6 +175,38 @@ def load_csv_vectors(infile='', words=None, out_prefix='', mod_logging_freq=1000
 
 	print('{}Loaded {} vectors'.format(out_prefix, len(vecs.keys())))
 	return vecs
+
+
+def collect_keys(in_file, out_path, logging):
+	full_keys = set()
+	paths_only = set()
+
+	coarse_suffix = '_coarse' if 'coarse' in in_file else ''
+	filtered_suffix = '_filtered' if 'filtered' in in_file else ''
+
+	with open_file(in_file, 'rt', encoding='utf-8') as in_vectors:
+		for idx, line in enumerate(in_vectors, 1):
+			logging.info('Processing line {}...'.format(idx))
+			line = line.rstrip().split('\t') # Line ends with a tab
+
+			features = line[1:]
+
+			while len(features) > 0:
+				_ = features.pop()
+				feat = features.pop()
+
+				p, _ = split_path_from_word(feat)
+
+				full_keys.add(feat)
+				paths_only.add(p)
+
+	logging.info('Dumping full_keys to {}; len={}...'.format( os.path.join(out_path, 'full_keys{}{}.joblib'.format(coarse_suffix, filtered_suffix)), len(full_keys)))
+	joblib.dump(full_keys, os.path.join(out_path, 'full_keys{}{}.joblib'.format(coarse_suffix, filtered_suffix)))
+	logging.info('Dumped full_keys!')
+
+	logging.info('Dumping path_only to {}; len={}...'.format(os.path.join(out_path, 'paths_only{}{}.joblib'.format(coarse_suffix, filtered_suffix)), len(paths_only)))
+	joblib.dump(paths_only, os.path.join(out_path, 'paths_only{}{}.joblib'.format(coarse_suffix, filtered_suffix)))
+	logging.info('Dumped paths_only!')
 
 
 def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, normalise=False):
