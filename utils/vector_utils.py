@@ -220,7 +220,7 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, norm
 	logging.info('Conversion finished!')
 
 
-def convert_csv_vectors(in_file, out_file, conversion_map):
+def convert_csv_vectors(in_file, out_file, conversion_map, normalise=False):
 	with open_file(in_file, 'rt', encoding='utf-8') as in_vectors, open_file(out_file, 'wt', encoding='utf-8') as out_vectors:
 		for idx, line in enumerate(in_vectors, 1):
 			if (idx % 3000 == 0): print('\tConverting line {}...'.format(idx))
@@ -252,10 +252,11 @@ def convert_csv_vectors(in_file, out_file, conversion_map):
 				converted_features[converted_feature] += freq
 
 			# Renormalise vectors
-			total = sum(converted_features.values())
+			if (normalise):
+				total = sum(converted_features.values())
 
-			for feat, val in converted_features.items():
-				converted_features[feat] /= total
+				for feat, val in converted_features.items():
+					converted_features[feat] /= total
 
 			# Write Features
 			for k, v in converted_features.items():
