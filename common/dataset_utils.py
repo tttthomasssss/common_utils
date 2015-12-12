@@ -494,7 +494,8 @@ def fetch_toy_example_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_
 	return (vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled) if not wrap_in_list else [(vectorized_labelled_train, train_labels, vectorized_labelled_test, test_labels, vectorized_unlabelled)]
 
 
-def fetch_movie_reviews_dataset_vectorized(dataset_path, use_tfidf=False, wrap_in_list=False, count_dtype=np.int64,
+def fetch_movie_reviews_dataset_vectorized(dataset_path=os.path.join(paths.get_dataset_path(), 'movie_reviews', 'aclImdb'),
+										   use_tfidf=False, wrap_in_list=False, count_dtype=np.int64,
 										   tfidf_dtype=np.float64, return_raw=False, extraction_style='all',
 										   binarize=False, tf_normalisation=False, ngram_range=(1, 1),
 										   force_recreate_dataset=False):
