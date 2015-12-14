@@ -6,6 +6,8 @@ import os
 import tarfile
 
 from common import paths
+from scipy import sparse
+import numpy as np
 
 import joblib
 
@@ -123,6 +125,51 @@ def find_vector_indices(in_file, words, out_prefix, mod_logging_freq=10000):
 				break
 
 	return vector_index
+
+
+def vectorise_csv_vectors(in_file, out_path, key_path, logging, words=None, out_prefix='', mod_logging_freq=3000):
+	vecs={}
+	logging.info('Loading vectors from: {}'.format(in_file))
+	logging.info('Words of interest: {}'.format(words))
+	with open_file(in_file, 'rt', encoding='utf-8') as in_vectors:
+		keys = list(joblib.load(key_path))
+		n_keys = len(keys)
+		lines = 0
+
+		for line in in_vectors:
+			lines += 1
+			if (lines % mod_logging_freq == 0): logging.info('{}Reading line {}; Words left to find: {}'.format(out_prefix, lines, len(words) if words is not None else -1))
+
+			line = line.rstrip().split('\t') # Line ends with a tab
+
+			entry = line[0]
+
+			if (words is None or entry in words):
+				v = np.zeros((n_keys,), dtype=float)
+				features = line[1:]
+
+				index = 0
+				while len(features) > 0:
+					index += 1
+
+					freq = float(features.pop())
+					feat = features.pop()
+
+					idx = keys.index(feat)
+					v[idx] = freq
+
+				# Store array in sparse format on disk
+				joblib.dump(sparse.csr_matrix(v), os.path.join(out_path, '.'.join([entry, 'joblib'])))
+
+				if (words is not None):
+					words.remove(entry)
+
+			if (words is not None and len(words) <= 0): # Early stopping
+				break
+
+	logging.info('{}Loaded {} vectors'.format(out_prefix, len(vecs.keys())))
+	return vecs
+
 
 #---
 #load in pre-filtered and (optionally) normalised vectors
