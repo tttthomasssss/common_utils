@@ -209,7 +209,21 @@ def collect_keys(in_file, out_path, logging):
 	logging.info('Dumped paths_only!')
 
 
-def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep_features=set(), normalise=False):
+def filter_vector(vector, min_count, min_features, logging, keep_vectors=set()):
+	filtered_vector = {}
+	temp_vector = {}
+	filtered_feat_count = 0
+
+	for feat_count, (feat, freq) in enumerate(vector.items()):
+		filtered_feat_count += 1
+		filtered_vector[feat] = freq
+
+	logging.info('original feat count={}; new feat count={}'.format(feat_count, filtered_feat_count))
+
+	return filtered_vector
+
+
+def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep_vectors=set(), normalise=False):
 	with open_file(in_file, 'rt', encoding='utf-8') as in_vectors, open_file(out_file, 'wt', encoding='utf-8') as out_vectors:
 		vec_count = 0
 		filtered_vec_count = 0
@@ -232,7 +246,7 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep
 				freq = float(features.pop())
 				feat = features.pop()
 
-				if (feat not in keep_features):
+				if (entry not in keep_vectors):
 					if (freq >= min_count):
 						filtered_feat_count += 1
 						filtered_vector[feat] = freq
@@ -242,7 +256,7 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep
 						filtered_vector[feat] = freq
 
 			# Check if filtered vector is in keep_features and whether it conforms to the requirments
-			if (feat in keep_features):
+			if (entry in keep_vectors):
 				if (len(filtered_vector) < min_features):
 					logging.info('\tFiltered vector is smaller than min_length (len={}...)'.format(len(filtered_vector)))
 					if (len(filtered_vector) > 0):
