@@ -209,10 +209,13 @@ def collect_keys(in_file, out_path, logging):
 	logging.info('Dumped paths_only!')
 
 
-def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, normalise=False):
+def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep_features=set(), normalise=False):
 	with open_file(in_file, 'rt', encoding='utf-8') as in_vectors, open_file(out_file, 'wt', encoding='utf-8') as out_vectors:
+		vec_count = 0
+		filtered_vec_count = 0
 		for idx, line in enumerate(in_vectors, 1):
 			logging.info('Converting line {}...'.format(idx))
+			vec_count += 1
 
 			feat_count = 0
 			filtered_feat_count = 0
@@ -222,15 +225,31 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, norm
 
 			features = line[1:]
 			filtered_vector = {}
+			temp_vector = {}
 
 			while len(features) > 0:
 				feat_count += 1
 				freq = float(features.pop())
 				feat = features.pop()
 
-				if (freq >= min_count):
-					filtered_feat_count += 1
-					filtered_vector[feat] = freq
+				if (feat not in keep_features):
+					if (freq >= min_count):
+						filtered_feat_count += 1
+						filtered_vector[feat] = freq
+				else:
+					temp_vector[feat] = freq
+					if (freq >= min_count):
+						filtered_vector[feat] = freq
+
+			# Check if filtered vector is in keep_features and whether it conforms to the requirments
+			if (feat in keep_features):
+				if (len(filtered_vector) < min_features):
+					logging.info('\tFiltered vector is smaller than min_length (len={}...)'.format(len(filtered_vector)))
+					if (len(filtered_vector) > 0):
+						logging.info('\tFiltered vector length > 0, so will be represented as a filtered vector!')
+					else:
+						logging.info('\tFiltered vector length <= 0, so vector for word={} will be represented as an unfiltered vector!'.format(entry))
+						filtered_vector = temp_vector
 
 			# Renormalise vectors
 			if (normalise):
@@ -243,6 +262,7 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, norm
 
 			# Write Features
 			if (len(filtered_vector) >= min_features):
+				filtered_vec_count += 1
 				logging.info('\tStarting to write vectors [old_feat_count={}; new_feat_count={}]...'.format(feat_count, filtered_feat_count))
 				out_vectors.write(entry + '\t')
 				for k, v in filtered_vector.items():
@@ -251,7 +271,8 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, norm
 				logging.info('\tVector written to disk!')
 			else:
 				logging.info('\tSkipping vectors due to too few features: {} (min_features={})'.format(len(filtered_vector), min_features))
-	logging.info('Conversion finished!')
+
+	logging.info('Conversion finished! Original number of vectors={}; filtered number={}!'.format(vec_count, filtered_vec_count))
 
 
 def convert_csv_vectors(in_file, out_file, conversion_map, normalise=False):
