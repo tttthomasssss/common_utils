@@ -128,13 +128,14 @@ def find_vector_indices(in_file, words, out_prefix, mod_logging_freq=10000):
 
 
 def vectorise_csv_vectors(in_file, out_path, key_path, logging, words=None, out_prefix='', mod_logging_freq=3000):
-	vecs={}
 	logging.info('Loading vectors from: {}'.format(in_file))
 	logging.info('Words of interest: {}'.format(words))
 	with open_file(in_file, 'rt', encoding='utf-8') as in_vectors:
-		keys = list(joblib.load(key_path))
+		keys = joblib.load(key_path)
+		keys_list = list(keys)
 		n_keys = len(keys)
 		lines = 0
+		oov = set()
 
 		for line in in_vectors:
 			lines += 1
@@ -155,8 +156,12 @@ def vectorise_csv_vectors(in_file, out_path, key_path, logging, words=None, out_
 					freq = float(features.pop())
 					feat = features.pop()
 
-					idx = keys.index(feat)
-					v[idx] = freq
+					if (feat in keys):
+						idx = keys_list.index(feat)
+						v[idx] = freq
+					else:
+						oov.add(feat)
+						logging.info('[WARNING] - {} not found in keyset!'.format(feat))
 
 				# Store array in sparse format on disk
 				joblib.dump(sparse.csr_matrix(v), os.path.join(out_path, '.'.join([entry, 'joblib'])))
@@ -168,6 +173,7 @@ def vectorise_csv_vectors(in_file, out_path, key_path, logging, words=None, out_
 				break
 
 	logging.info('{}Loaded {} vectors'.format(out_prefix, len(vecs.keys())))
+	logging.info('{} were not found in the keyset ({} entries)!'.format(oov, len(oov)))
 	return vecs
 
 
