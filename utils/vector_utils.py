@@ -241,18 +241,24 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep
 			filtered_vector = {}
 			temp_vector = {}
 
-			while len(features) > 0:
-				feat_count += 1
-				freq = float(features.pop())
-				feat = features.pop()
+			if (entry not in keep_vectors):
+				while len(features) > 0:
+					feat_count += 1
+					freq = float(features.pop())
+					feat = features.pop()
 
-				if (entry not in keep_vectors):
 					if (freq >= min_count):
 						filtered_feat_count += 1
 						filtered_vector[feat] = freq
-				else:
+			else:
+				while len(features) > 0:
+					feat_count += 1
+					freq = float(features.pop())
+					feat = features.pop()
+
 					temp_vector[feat] = freq
 					if (freq >= min_count):
+						filtered_feat_count += 1
 						filtered_vector[feat] = freq
 
 			# Check if filtered vector is in keep_features and whether it conforms to the requirments
