@@ -285,11 +285,11 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep
 
 			feat_count = 0
 			filtered_feat_count = 0
-			line = line.rstrip().split('\t') # Line ends with a tab
+			line = line.lower().rstrip().split('\t') # Line ends with a tab
 
 			entry = line[0].lower()
 
-			features = line.lower()[1:]
+			features = line[1:]
 			filtered_vector = {}
 			temp_vector = {}
 
