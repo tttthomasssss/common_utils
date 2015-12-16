@@ -172,9 +172,7 @@ def vectorise_csv_vectors(in_file, out_path, key_path, logging, words=None, out_
 			if (words is not None and len(words) <= 0): # Early stopping
 				break
 
-	logging.info('{}Loaded {} vectors'.format(out_prefix, len(vecs.keys())))
 	logging.info('{} were not found in the keyset ({} entries)!'.format(oov, len(oov)))
-	return vecs
 
 
 #---
@@ -262,18 +260,19 @@ def collect_keys(in_file, out_path, logging):
 	logging.info('Dumped paths_only!')
 
 
-def filter_vector(vector, min_count, min_features, logging, keep_vectors=set()):
+def filter_vector(vector, min_count, min_features, logging):
 	filtered_vector = {}
-	temp_vector = {}
 	filtered_feat_count = 0
 
 	for feat_count, (feat, freq) in enumerate(vector.items()):
 		filtered_feat_count += 1
-		filtered_vector[feat] = freq
+
+		if (freq >= min_count):
+			filtered_vector[feat] = freq
 
 	logging.info('original feat count={}; new feat count={}'.format(feat_count, filtered_feat_count))
 
-	return filtered_vector
+	return filtered_vector if (len(filtered_vector) >= min_features) else {}
 
 
 def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep_vectors=set(), normalise=False):
@@ -288,22 +287,14 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep
 			filtered_feat_count = 0
 			line = line.rstrip().split('\t') # Line ends with a tab
 
-			entry = line[0]
+			entry = line[0].lower()
 
-			features = line[1:]
+			features = line[1:].lower()
 			filtered_vector = {}
 			temp_vector = {}
 
-			if (entry not in keep_vectors):
-				while len(features) > 0:
-					feat_count += 1
-					freq = float(features.pop())
-					feat = features.pop()
-
-					if (freq >= min_count):
-						filtered_feat_count += 1
-						filtered_vector[feat] = freq
-			else:
+			# Check if filtered vector is in keep_features and whether it conforms to the requirments
+			if (entry in keep_vectors):
 				while len(features) > 0:
 					feat_count += 1
 					freq = float(features.pop())
@@ -314,8 +305,6 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep
 						filtered_feat_count += 1
 						filtered_vector[feat] = freq
 
-			# Check if filtered vector is in keep_features and whether it conforms to the requirments
-			if (entry in keep_vectors):
 				if (len(filtered_vector) < min_features):
 					logging.info('\tFiltered vector is smaller than min_length (len={}...)'.format(len(filtered_vector)))
 					if (len(filtered_vector) > 0):
@@ -323,6 +312,17 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep
 					else:
 						logging.info('\tFiltered vector length <= 0, so vector for word={} will be represented as an unfiltered vector!'.format(entry))
 						filtered_vector = temp_vector
+			else:
+				while len(features) > 0:
+					feat_count += 1
+					freq = float(features.pop())
+					feat = features.pop()
+
+					if (freq >= min_count):
+						filtered_feat_count += 1
+						filtered_vector[feat] = freq
+
+			logging.info('\tProcessing Filtered Vector of length={}...'.format(len(filtered_vector)))
 
 			# Renormalise vectors
 			if (normalise):
