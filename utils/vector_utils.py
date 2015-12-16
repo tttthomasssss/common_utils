@@ -180,8 +180,9 @@ def vectorise_csv_vectors(in_file, out_path, key_path, logging, words=None, out_
 #----
 def load_csv_vectors(infile='', words=None, out_prefix='', mod_logging_freq=10000):
 	vecs={}
-	print ('Loading vectors from: {}'.format(infile))
-	print ('Words of interest: {}'.format(words))
+	print('Words of interest: {}'.format(words))
+	print('Thats {} words.'.format(len(words) if words is not None else 'all'))
+	print('Loading vectors from: {}'.format(infile))
 	with open_file(infile, 'rt', encoding='utf-8') as instream:
 		#csv_reader = csv.reader(instream, delimiter='\t')
 		lines = 0
