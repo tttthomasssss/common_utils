@@ -292,10 +292,12 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep
 			features = line[1:]
 			filtered_vector = {}
 			temp_vector = {}
+			keep_vectors_flag = False
 
 			# Check if filtered vector is in keep_features and whether it conforms to the requirments
 			if (entry in keep_vectors):
 				logging.info('\t {} in keep_vectors...'.format(entry))
+				keep_vectors_flag = True
 				while len(features) > 0:
 					feat_count += 1
 					freq = float(features.pop())
@@ -335,7 +337,7 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep
 				logging.info('\tFinished Normalising!')
 
 			# Write Features
-			if (len(filtered_vector) >= min_features or entry in keep_vectors):
+			if (len(filtered_vector) >= min_features or keep_vectors_flag):
 				filtered_vec_count += 1
 				logging.info('\tStarting to write vector for entry={} [old_feat_count={}; new_feat_count={}]...'.format(entry, feat_count, filtered_feat_count))
 				out_vectors.write(entry + '\t')
