@@ -295,6 +295,7 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep
 
 			# Check if filtered vector is in keep_features and whether it conforms to the requirments
 			if (entry in keep_vectors):
+				logging.info('\t {} in keep_vectors...'.format(entry))
 				while len(features) > 0:
 					feat_count += 1
 					freq = float(features.pop())
