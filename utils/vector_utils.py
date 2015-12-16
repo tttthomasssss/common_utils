@@ -287,7 +287,7 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep
 			filtered_feat_count = 0
 			line = line.lower().rstrip().split('\t') # Line ends with a tab
 
-			entry = line[0].lower()
+			entry = line[0]
 
 			features = line[1:]
 			filtered_vector = {}
@@ -335,9 +335,9 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep
 				logging.info('\tFinished Normalising!')
 
 			# Write Features
-			if (len(filtered_vector) >= min_features):
+			if (len(filtered_vector) >= min_features or entry in keep_vectors):
 				filtered_vec_count += 1
-				logging.info('\tStarting to write vectors [old_feat_count={}; new_feat_count={}]...'.format(feat_count, filtered_feat_count))
+				logging.info('\tStarting to write vector for entry={} [old_feat_count={}; new_feat_count={}]...'.format(entry, feat_count, filtered_feat_count))
 				out_vectors.write(entry + '\t')
 				for k, v in filtered_vector.items():
 					out_vectors.write(k + '\t' + str(v) + '\t')
