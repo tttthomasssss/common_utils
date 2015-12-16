@@ -225,7 +225,7 @@ def load_csv_vectors(infile='', words=None, out_prefix='', mod_logging_freq=1000
 			if (words is not None and len(words) <= 0): # Early stopping
 				break
 
-	print('{}Loaded {} vectors'.format(out_prefix, len(vecs.keys())))
+	print('{}Loaded {} vectors; {} vectors are oov.'.format(out_prefix, len(vecs.keys()), len(words)))
 	return vecs
 
 
