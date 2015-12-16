@@ -289,7 +289,7 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep
 
 			entry = line[0].lower()
 
-			features = line[1:].lower()
+			features = line.lower()[1:]
 			filtered_vector = {}
 			temp_vector = {}
 
