@@ -2,7 +2,6 @@ __author__ = 'thk22'
 import collections
 import csv
 import gzip
-import math
 import os
 import tarfile
 
@@ -262,7 +261,7 @@ def collect_keys(in_file, out_path, logging):
 	logging.info('Dumped paths_only!')
 
 
-def filter_vector(vector, min_count, min_features, logging, max_depth=math.inf):
+def filter_vector(vector, min_count, min_features, logging, max_depth=np.inf):
 	filtered_vector = {}
 	filtered_feat_count = 0
 
