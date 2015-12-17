@@ -264,11 +264,13 @@ def collect_keys(in_file, out_path, logging):
 def filter_vector(vector, min_count, min_features, logging, max_depth=np.inf):
 	filtered_vector = {}
 	filtered_feat_count = 0
+	feat_count = 0
 
-	for feat_count, (feat, freq) in enumerate(vector.items()):
-		filtered_feat_count += 1
+	for feat, freq in vector.items():
+		feat_count += 1
 
 		if (freq >= min_count and len(feat.split('\xbb')) <= max_depth):
+			filtered_feat_count += 1
 			filtered_vector[feat] = freq
 
 	logging.info('original feat count={}; new feat count={}'.format(feat_count, filtered_feat_count))
