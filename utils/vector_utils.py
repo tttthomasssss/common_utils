@@ -3,6 +3,7 @@ import collections
 import csv
 import gzip
 import os
+import string
 import tarfile
 
 from common import paths
@@ -145,7 +146,11 @@ def vectorise_csv_vectors(in_file, out_path, key_path, logging, words=None, out_
 
 			entry = line[0]
 
-			if (words is None or entry in words):
+			# Fancy shit to avoid the dump falling over becasue `entry` is or contains punctuation
+			trans_table = dict(map(lambda x: (x[1], '__PUNCT__' + str(x[0])), enumerate(string.punctuation, 666)))
+			fname = os.path.join(out_path, '.'.join([entry.translate(str.maketrans(trans_table)), 'joblib']))
+
+			if (not os.path.exists(fname) and (words is None or entry in words)):
 				v = np.zeros((n_keys,), dtype=float)
 				features = line[1:]
 
@@ -164,7 +169,7 @@ def vectorise_csv_vectors(in_file, out_path, key_path, logging, words=None, out_
 						logging.info('[WARNING] - {} not found in keyset!'.format(feat))
 
 				# Store array in sparse format on disk
-				joblib.dump(sparse.csr_matrix(v), os.path.join(out_path, '.'.join([entry, 'joblib'])))
+				joblib.dump(sparse.csr_matrix(v), fname)
 
 				if (words is not None):
 					words.remove(entry)
