@@ -8,8 +8,8 @@ import tarfile
 
 from common import paths
 from scipy import sparse
+import dill
 import numpy as np
-
 import joblib
 
 
@@ -84,6 +84,15 @@ def collapse_offset_vector(offset_vector, offset_path=None):
 		reduced_offset_vector[new_key] += offset_vector[key]
 
 		return reduced_offset_vector
+
+
+def load_vector_cache(vector_in_file):
+	if (vector_in_file.endswith('.dill')):
+		return dill.load(open(vector_in_file, 'rb'))
+	elif (vector_in_file.endswith('.joblib')):
+		return joblib.load(vector_in_file)
+	else:
+		raise NotImplementedError
 
 
 def oov_check(in_file, words, out_prefix, mod_logging_freq=10000):
