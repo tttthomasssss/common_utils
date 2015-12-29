@@ -266,7 +266,7 @@ def collect_keys(in_file, out_path, logging):
 	logging.info('Dumped paths_only!')
 
 
-def filter_vector(vector, min_count, min_features, logging, max_depth=np.inf):
+def filter_vector(vector, min_count, min_features, logging, max_depth=np.inf, force_keep=False):
 	filtered_vector = {}
 	filtered_feat_count = 0
 	feat_count = 0
@@ -280,7 +280,21 @@ def filter_vector(vector, min_count, min_features, logging, max_depth=np.inf):
 
 	logging.info('original feat count={}; new feat count={}'.format(feat_count, filtered_feat_count))
 
-	return filtered_vector if (len(filtered_vector) >= min_features) else {}
+	if (force_keep): # Sometimes we want to _really_ keep the vector (e.g. in the case where its a target vector for comparison)
+		len_vec = len(filtered_vector)
+		if (len_vec < min_features and len_vec > 0):
+			logging.warning('length of filtered vector[={}] < min_features[={}] > 0, keeping filtered vector as is.'.format(len_vec, min_features))
+			return filtered_vector
+		elif (len_vec < min_features and len_vec <= 0):
+			logging.warning('length of filtered vector[={}] <= 0; returning original, unfiltered vector!'.format(len_vec))
+			return vector
+		elif (len_vec > min_features):
+			return filtered_vector
+		else:
+			logging.error('Bad stuff is happening [len_vec={}; min_features={}]! Raising error!'.format(len_vec, min_features))
+			raise RuntimeError
+	else:
+		return filtered_vector if (len(filtered_vector) >= min_features) else {}
 
 
 def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep_vectors=set(), normalise=False):
