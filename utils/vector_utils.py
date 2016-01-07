@@ -311,7 +311,7 @@ def filter_csv_vectors(in_file, out_file, min_count, min_features, logging, keep
 		vec_count = 0
 		filtered_vec_count = 0
 		for idx, line in enumerate(in_vectors, 1):
-			logging.info('Converting line {}...'.format(idx))
+			if idx % 3000 == 0: logging.info('Converting line {}...'.format(idx))
 			vec_count += 1
 
 			feat_count = 0
