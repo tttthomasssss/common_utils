@@ -35,7 +35,8 @@ _EXTERNAL_BASE_PATH = {
 
 _EXTERNAL_DATASET_PATH = {
 	'disco': '/mnt/external/thk22/_datasets',
-	'Thomas-Kobers-MacBook.local': os.path.expanduser('~/DevSandbox/EpicDataShelf/tag-lab/_CACHE/')
+	'Thomas-Kobers-MacBook.local': os.path.expanduser('~/DevSandbox/EpicDataShelf/tag-lab/_CACHE/'),
+	'm011437.inf.susx.ac.uk': os.path.expanduser('~/DevSandbox/InfiniteSandbox/_datasets/CACHE')
 }
 
 
