@@ -276,7 +276,7 @@ def collect_keys(in_file, out_path, logging):
 	logging.info('Dumped paths_only!')
 
 
-def filter_vector(vector, min_count, min_features, logging, max_depth=np.inf, force_keep=False):
+def filter_vector(vector, min_count, min_features, logging, max_depth=np.inf, force_keep=False, normalised=False):
 	filtered_vector = {}
 	filtered_feat_count = 0
 	feat_count = 0
@@ -284,7 +284,7 @@ def filter_vector(vector, min_count, min_features, logging, max_depth=np.inf, fo
 	for feat, freq in vector.items():
 		feat_count += 1
 
-		if (freq >= min_count and len(feat.split('\xbb')) <= max_depth):
+		if ((freq >= min_count or normalised) and len(feat.split('\xbb')) <= max_depth): # This is still a quickhack and doesn't allow postfiltering by frequency on normalised vectors
 			filtered_feat_count += 1
 			filtered_vector[feat] = freq
 
