@@ -229,6 +229,7 @@ def load_csv_vectors(infile='', words=None, out_prefix='', mod_logging_freq=1000
 						features = features + list(feat)
 
 				if entry in vecs.keys():
+					print('{}Found {} in keys! Going to merge the two by adding!'.format(out_prefix, entry))
 					vecs[entry] = add_vectors(vecs[entry], vector)
 				else:
 					vecs[entry] = vector
@@ -465,8 +466,8 @@ def split_path_from_word(event, universal_deps=open(os.path.join(paths.get_datas
 #add two vectors
 #not used I think
 #---
-def add_vectors(self, avector, bvector):
-	rvector=dict(avector)
+def add_vectors(avector, bvector):
+	rvector = dict(avector)
 	for feat in bvector.keys():
-		rvector[feat] = rvector.get(feat,0)+bvector[feat]
+		rvector[feat] = rvector.get(feat, 0) + bvector[feat]
 	return rvector
