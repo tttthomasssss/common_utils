@@ -298,7 +298,7 @@ def filter_vector(vector, min_count, min_features, logging, max_depth=np.inf, fo
 		elif (len_vec < min_features and len_vec <= 0):
 			logging.warning('length of filtered vector[={}] <= 0; returning original, unfiltered vector!'.format(len_vec))
 			return vector
-		elif (len_vec > min_features):
+		elif (len_vec >= min_features):
 			return filtered_vector
 		else:
 			logging.error('Bad stuff is happening [len_vec={}; min_features={}]! Raising error!'.format(len_vec, min_features))
